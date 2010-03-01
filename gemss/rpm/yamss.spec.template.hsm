@@ -1,0 +1,33 @@
+Summary: INFN GEMSS
+Name: gemss-hsm
+Version:
+Release: 1
+Source0: %{name}-%{version}.tar.gz
+License: GPL
+Group: CNAF
+Requires: gpfs.base >= 3.2.1-14 jdk >= 2000:1.5 TIVsm-HSM >= 6.1.0-2
+%description
+GEMSS stands for Grid-EnabledMass Storage System, and implements an interface between StoRM, GPFS and TSM.
+%prep
+%setup -q
+%build
+./configure
+make
+%install
+make install
+%pre
+if pidof -x yamssMonitor > /dev/null; then
+  echo Stopping GEMSS services...
+  /etc/init.d/yamssmonitor stop
+  sleep 5
+fi
+%post
+echo Starting GEMSS services...
+/etc/init.d/yamssmonitor start
+%preun
+if pidof -x yamssMonitor > /dev/null; then
+  echo Stopping GEMSS services...
+  /etc/init.d/yamssmonitor stop
+  sleep 5
+fi
+%files

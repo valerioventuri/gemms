@@ -1,0 +1,36 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+ext=no
+if [ $1 = "-l" ]; then
+  ext=yes
+  shift
+fi
+
+device=$1
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "query content $2" 2>&1 | while read -r myline; do
+  node=$(echo $myline | awk '{print $1}')
+  if [ "$node"x != "$TSM_PROXY_NODE"x ]; then
+     echo $myline
+  else
+     fname=$(echo $myline | awk '{print $3$5}')
+     if [ $ext = "yes" ]; then
+        $yamssLs $fname
+     else
+        echo $fname
+     fi
+  fi
+done

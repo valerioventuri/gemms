@@ -1,0 +1,23 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
+
+if [ -f $DRAINDIR/recall.drain ]; then
+  echo Filesystem $device is already in drain state for recalls
+else
+  echo Filesystem $device is now in drain state for recalls
+  touch $DRAINDIR/recall.drain
+fi

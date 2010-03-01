@@ -1,0 +1,25 @@
+Summary: INFN GEMSS
+Name: gemss-client
+Version: 1.1.29
+Release: 1
+Source0: %{name}-%{version}.tar.gz
+License: GPL
+Group: CNAF
+Requires: gpfs.base >= 3.2.1-14
+%description
+GEMSS stands for Grid-EnabledMass Storage System, and implements an interface between StoRM, GPFS and TSM.
+%prep
+%setup -q
+%build
+./configure
+make
+%install
+make install
+%files
+/etc/profile.d/yamss.csh
+/etc/profile.d/yamss.sh
+/usr/local/yamss/bin/yamssLs
+/usr/local/yamss/bin/yamssRecall
+/usr/local/yamss/bin/yamssRm
+/usr/local/yamss/bin/yamssStubbify
+/var/mmfs/etc/hsmCommands

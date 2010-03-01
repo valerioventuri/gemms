@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Default timeout in seconds
+TIMEOUT=5
+
+Fatal () { 
+  echo "$@"
+  exit 1
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+	-u)	ParentUID=$2; shift;;
+	-t)	Timeout="$2"; shift;;
+	--)	shift; break;;
+	*)	break;;			# First file name
+    esac
+    shift
+done
+
+: ${Timeout:=$TIMEOUT}			# Set default [seconds]
+
+if [ -z "$ParentUID" ]; then
+
+    # Start "watchdog" process, and then run the command.
+    [ $# -lt 1 ] && Fatal "please specify a command to execute"
+    pname=$(date +%s)
+    "$0" -u $$""$pname -t $Timeout &	# Start watchdog
+    exec -a $$""$pname "$@"		# Run command
+    exit 2				# NOT REACHED
+
+else
+
+    # We run in "watchdog" mode, $ParentUID contains the PID+EPOCH name
+    # of the process we should terminate after approximately $Timeout seconds.
+    [ $# -ne 0 ] && Fatal "please do not use -u option interactively"
+
+    exec >/dev/null 0<&1 2>&1	# Suppress error messages
+
+    let i=0
+    while [ $i -lt $Timeout ]; do
+       sleep 5
+       pid=$(pidof -x $ParentUID)
+       if [ $? != 0 ]; then
+          exit 0
+       fi
+       let i=$i+5
+    done
+
+    pid=$(pidof -x $ParentUID)
+    if [ $? = 0 ]; then
+       kill -TERM $pid	# Give process time to terminate
+    fi
+
+    # give some breath before coup de grace
+    sleep 60
+
+    pid=$(pidof -x $ParentUID)
+    if [ $? = 0 ]; then
+       kill -KILL $pid	# Die!
+    fi
+
+    exit 0
+
+fi

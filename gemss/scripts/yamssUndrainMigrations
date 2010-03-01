@@ -1,0 +1,23 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
+
+if [ ! -f $DRAINDIR/migrate.drain ]; then
+  echo Filesystem $device is not in drain state for migrations
+else
+  echo Filesystem $device reactivated for migrations
+  rm -f $DRAINDIR/migrate.drain
+fi

@@ -1,0 +1,75 @@
+#!/bin/sh
+
+device=$1
+shift
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
+TMPDIR=$(mktemp -d /tmp/premigratestat.XXXXXXXX)
+
+start=$1
+stop=$2
+
+if [ "$start"x = "x" ]; then
+  let start=$(date +%s)-86400
+fi
+
+if [ "$stop"x = "x" ]; then
+  stop=$(date +%s)
+fi
+
+lockfile $SYSTEM_DIRECTORY_PATH/YAMSS_LOCK/premigrate.write_stat
+cat $STATDIR/premigrate | awk -v start=$start -v stop=$stop '($3>start&&$3<stop) {print $0}' > $TMPDIR/premigrate
+rm -f $SYSTEM_DIRECTORY_PATH/YAMSS_LOCK/premigrate.write_stat
+
+let i=$(cat $TMPDIR/premigrate|wc -l)
+
+echo
+
+echo "--------------------------------------------------------------"
+echo $start $stop | awk '{print "Start:",strftime("%c",$1),"\nStop:",strftime("%c",$2),"\nSeconds:",$2-$1}'
+echo "--------------------------------------------------------------"
+
+if [ $i -eq 0 ]; then
+  echo No statistics available for the specified period of time 
+else
+
+  {
+    printf "Tape\t Files\t File_throughput\t Data_transferred\n"
+    for tape in $(cat $TMPDIR/premigrate | egrep -v null | awk '{print $11}' | sort -k1,1 -u); do
+      cat $TMPDIR/premigrate | grep  $tape | awk -v stop=$stop -v start=$start -v tape=$tape 'BEGIN{i=0;a=0;t=0;err=0}{if($2=="ERR")err++; else if($4!=$5) {t+=$8;a+=$9/($5-$4);i++}}END{print tape,"\t",i,"\t",a/i/2**20"_MiB/s\t",t/2**30"_GiB"}'
+    done
+  } | column -t | tr "_" " "
+
+  echo "--------------------------------------------------------------"
+  {
+    printf "Hostname\t Files\t Failures\t File_throughput\t Data_transferred\n"
+    for host in $(cat $TMPDIR/premigrate | awk '{print $10}' | sort -k1,1 -u ); do
+      cat $TMPDIR/premigrate | grep  $host | awk -v stop=$stop -v start=$start -v host=$(echo $host|cut -d. -f1) 'BEGIN{i=0;a=0;t=0;err=0}{if($2=="ERR")err++; else if($4!=$5) {t+=$8;a+=$9/($5-$4);i++}}END{print host,i,"\t",err,"\t",a/i/2**20"_MiB/s\t",t/2**30"_GiB"}'
+    done
+    cat $TMPDIR/premigrate | awk -v stop=$stop -v start=$start 'BEGIN{i=0;a=0;t=0;err=0}{if($2=="ERR")err++; else if($4!=$5) {t+=$8;a+=$9/($5-$4);i++}}END{print "Total","\t",i,"\t",err,"\t",a/i/2**20"_MiB/s\t",t/2**30"_GiB"}'
+  } | column -t | tr "_" " "
+
+  echo "--------------------------------------------------------------"
+  {
+    printf "Maximum_retention_time\t Average_retention_time\n"
+    cat $TMPDIR/premigrate | awk -v stop=$stop -v start=$start 'BEGIN{i=0;a=0;t=0;err=0}{if($2=="ERR")err++; else if($4!=$5) {if(($3-$6)/3600.>a) {a=($3-$6)/3600.}; t+=($3-$6)/3600.;i++}}END{h=int(a); th=int(t/i); m=int((a-h)*60); tm=int((t/i-th)*60); s=int(((a-h)*60-m)*60); ts=int(((t/i-th)*60-tm)*60);  print h"h_"m"m_"s"s\t",th"h_"tm"m_"ts"s"}'
+  } | column -t | tr "_" " "
+
+fi
+
+echo "--------------------------------------------------------------"
+
+
+echo

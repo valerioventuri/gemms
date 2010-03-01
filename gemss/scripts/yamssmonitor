@@ -1,0 +1,102 @@
+#!/bin/bash
+#
+# yamssmonitor: Start/Stop YAMSS monitor process
+#
+# description: Start/Stop YAMSS monitor process 
+# chkconfig: - 95 10
+# processname: yamssMonitor
+# pidfile: /var/run/yamssmonitor.pid
+
+. /etc/rc.d/init.d/functions
+
+if [[ $# != 1 ]]
+then
+  echo $"Usage: $0 {start|stop|status|restart}"
+  exit 1
+fi
+
+prog="yamssMonitor"
+prog2="ng ng-stop"
+prefix="/usr/local/yamss/bin"
+
+if [[ ! -e $prefix/$prog ]]
+then
+   echo "$prefix/$prog not found"
+   exit 0
+fi
+
+rc=0
+
+start() {
+        echo -n "Starting $prog ... "
+
+        if [ -e /var/lock/subsys/$prog ]; then
+            if [ -n "`/sbin/pidof -x $prog`" ]; then
+                echo -n "$prog already running"
+                failure
+                echo
+                return 1
+            fi
+        fi
+
+        nohup $prefix/$prog >/dev/null 2>&1 &
+
+        sleep 1
+
+        if [ ! -n "`/sbin/pidof -x $prog`" ]; then
+                echo -n "start of $prog failed..."
+                failure
+                echo
+                return 1
+        fi
+
+        touch /var/lock/subsys/$prog
+
+        success
+
+        echo
+        return 0
+}
+
+stop() {
+        echo -n "Stopping $prog..."
+        killproc $prog
+        
+        RETVAL=$?
+        [ -f /var/lock/subsys/$prog ] && rm -f /var/lock/subsys/$prog
+        echo
+	$prefix/$prog2 ng-stop
+        return $RETVAL  
+}
+
+rhstatus() {
+        status $prog
+        
+        RETVAL=$?
+        return $RETVAL
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)
+        rhstatus 1
+        ;;
+  restart)
+        restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|status|restart}"
+        exit 1
+esac
+
+exit $?

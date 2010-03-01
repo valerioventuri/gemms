@@ -1,0 +1,151 @@
+#!/bin/bash
+
+# Strings which should be skipped when printing to log files
+
+LOGGER_BLACKLIST[1]="ANS9135E"
+LOGGER_BLACKLIST[2]="IBM Tivoli Storage Manager"
+LOGGER_BLACKLIST[3]="Command Line Space Management Client Interface"
+LOGGER_BLACKLIST[4]="Client Version"
+LOGGER_BLACKLIST[5]="Client date/time"
+LOGGER_BLACKLIST[6]="Copyright by IBM Corporation"
+LOGGER_BLACKLIST[7]="missing nls msg"
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+program=$2
+logfile=$3
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+LOGDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOG
+
+. $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig
+
+function strstr () {
+    # if s2 points to a string of zero length, strstr echoes s1
+    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
+
+    # strstr echoes nothing if s2 does not occur in s1
+    case "$1" in
+    *$2*) ;;
+    *) return 1;;
+    esac
+
+    # use the pattern matching code to strip off the match and everything
+    # following it
+    first=${1/$2*/}
+
+    # then strip off the first unmatched portion of the string
+    echo "${1##$first}"
+}
+
+# rotate the log file if needed
+let logmaxsize=$LOG_FILE_MAX_SIZE*1048576
+let logfilesize=$(ls -l $LOGDIR/$logfile 2>/dev/null | awk '{print $5}')+0
+let maxlognum=$LOG_FILE_MAX_RETENTION-1
+
+if [ $logfilesize -gt $logmaxsize ]; then
+
+  # Acquire lock on log file
+  lockfile -1 -l10 $LOCKDIR/$logfile.lock
+
+  # Check again log size as lock was not acquired on first check
+  let logfilesize=$(ls -l $LOGDIR/$logfile 2>/dev/null | awk '{print $5}')+0
+  if [ $logfilesize -gt $logmaxsize ]; then
+    mv -f $LOGDIR/$logfile $LOGDIR/$logfile.tmp
+    touch $LOGDIR/$logfile
+    # Release lock
+    rm -f $LOCKDIR/$logfile.lock
+
+    for seq in $(seq $maxlognum -1 1); do
+      let new=$seq+1
+      mv $LOGDIR/$logfile.$seq.gz $LOGDIR/$logfile.$new.gz 2>/dev/null
+      if [ $seq = 1 ]; then
+        gzip -c $LOGDIR/$logfile.tmp > $LOGDIR/$logfile.1.gz
+        rm -f $LOGDIR/$logfile.tmp
+      fi
+    done
+  else
+    # Release lock
+    rm -f $LOCKDIR/$logfile.lock
+  fi
+fi
+
+hostnam=$(hostname|cut -d. -f1)
+
+# read log writer PID
+read -r procpid
+
+# create temporary file to be used as fast cache
+mycache=$(mktemp /tmp/tsmloggercache.XXXXXXXX)
+
+# initialize old date
+olddate=0
+
+# read line by line from stdin
+while [ 1 ]; do
+
+  # if timeout expires on read do not exit...
+  myline="__YAMSS_DUMMY_LINE_FOR_LOGGER__"
+  read -r -t 1 myline
+  retval=$?
+  # ...otherwise exit
+  if [ "$myline" != "__YAMSS_DUMMY_LINE_FOR_LOGGER__" -a $retval = 1 ]; then
+     break
+  fi
+
+  let i=1
+  while [ 1 ]; do
+    if [ "${LOGGER_BLACKLIST[$i]}"x = "x" ]; then
+       break
+    fi
+    chstr=$(strstr "$myline" "${LOGGER_BLACKLIST[$i]}")
+    if [ "$chstr"x != "x" ]; then
+       break
+    fi
+    let i=$i+1
+  done
+
+  if [ "${LOGGER_BLACKLIST[$i]}"x != "x" ]; then
+    continue
+  fi
+
+  # if line is not empty and no timeout occurred while reading then print line
+  if [ "$myline"x != "x" -a "$myline" != "__YAMSS_DUMMY_LINE_FOR_LOGGER__" ]; then
+    # printout message to temporary cache prepending date, host and program name
+    echo $(date +"%D %H:%M:%S") $hostnam $program"[$procpid]:" "$myline" >> $mycache
+  fi
+
+  # every 5 seconds write temporary cache to log file
+  let delay=$(date +%s)-$olddate
+  if [ $delay -gt 5 ]; then
+
+    # Acquire lock on log file (no longer done... next line to be deleted)
+    # lockfile -1 -l10 $LOCKDIR/$logfile.lock
+
+    # printout temporary cache to log file
+    cat $mycache >> $LOGDIR/$logfile
+
+    # Release lock (no longer done... next line to be deleted)
+    # rm -f $LOCKDIR/$logfile.lock
+
+    # save old date
+    olddate=$(date +%s)
+
+    # clean and recreate temporary file to be used as fast cache
+    rm -f $mycache
+    mycache=$(mktemp /tmp/tsmloggercache.XXXXXXXX)
+
+  fi
+
+done
+
+# flush temporary cache to log file
+cat $mycache >> $LOGDIR/$logfile
+
+# remove cache file
+rm -f $mycache

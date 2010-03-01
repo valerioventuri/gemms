@@ -1,0 +1,137 @@
+#!/bin/bash
+
+source /etc/profile
+
+. /var/mmfs/etc/hsmCommands
+
+check_drain_file() {
+   if [ -f $1 ]; then  
+      return 0
+   fi
+   return 1
+}
+
+firstrun=1
+let hbnum=1
+
+while [ 1 ]; do
+
+  # loop over all mounted filesystems
+  while read -r myline; do
+     devname=$(basename $(echo "$myline"|awk '{print $1}'))
+     mntpoint=$(echo "$myline"|awk '{print $2}')
+     fstype=$(echo "$myline"|awk '{print $3}')
+
+     # if filesystem is not a gpfs continue
+     if [ "$fstype"x != "gpfsx" ]; then
+       continue
+     fi
+
+     # if configuration file does not exist continue
+     if [ ! -f $mntpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+       continue
+     fi
+
+     # startup
+     if [ $firstrun = "1" ]; then
+        printf "$$\nProcess has started\n" | $yamssLogger $devname yamssMonitor monitor.log
+        MYPID=$$
+        (echo $MYPID; $ngserver) | $yamssLogger $devname yamssMonitor monitor.log &
+     fi 
+
+     # log heartbeat
+     if [ $hbnum -eq 50 ]; then
+        printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log 
+     fi 
+
+     # start yamssProcessRemove process for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof -x yamssProcessRem); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssProcessRemove $devname 2>&1 | $yamssLogger $devname yamssProcessRemove monitor.log &
+     fi
+
+     # start yamssProcessStubbify process for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof -x yamssProcessStu); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssProcessStubbify $devname 2>&1 | $yamssLogger $devname yamssProcessStubbify monitor.log &
+     fi
+
+     # start yamssUpdateDamagedFiles for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof -x yamssUpdateDama); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssUpdateDamagedFiles $devname 2>&1 | $yamssLogger $devname yamssUpdateDamagedFiles monitor.log &
+     fi
+
+     # start yamssUpdateVolumesInErrorState for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof -x yamssUpdateVolu); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssUpdateVolumesInErrorState $devname 2>&1 | $yamssLogger $devname yamssUpdateVolumesInErrorState monitor.log &
+     fi
+
+
+     # Check if drain file is present
+     if check_drain_file $mntpoint/system/YAMSS_DRAIN/recall.drain; then
+       continue
+     fi
+
+     # execute configuration file
+     . $mntpoint/system/YAMSS_CONFIG/hsmConfig
+
+     # check if this node is within the recall node list
+     hostnam=$(hostname|cut -d. -f1)
+     isin=0
+     for nodes in $(echo $RECALL_NODE_LIST|tr "," " "|cut -d. -f1); do
+        if [ "$hostnam"x = "$nodes"x ]; then
+           isin=1
+           break
+        fi
+     done
+     if [ "$isin"x = "0x" ]; then
+        continue
+     fi
+
+     # start yamssReorderRecall process for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof -x yamssReorderRec); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssReorderRecall $devname 2>&1 | $yamssLogger $devname yamssReorderRecall monitor.log &
+     fi
+
+     # start yamssProcessRecall processes for this filesystem if not yet running
+     let nrun=1
+     for pids in $($pidof -x yamssProcessRec); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     for nlau in $(seq $nrun $RECALL_RUNNING_THREADS); do
+        $yamssProcessRecall $devname 2>&1 | $yamssLogger $devname yamssProcessRecall monitor.log &
+
+     done
+     
+  done < /proc/mounts
+
+  sleep 5
+
+  # reset first run flag
+  firstrun=0
+
+  # increase heartbeat control counter
+  let hbnum=$hbnum+1
+  if [ $hbnum -gt 50 ]; then
+    let hbnum=1
+  fi
+
+done

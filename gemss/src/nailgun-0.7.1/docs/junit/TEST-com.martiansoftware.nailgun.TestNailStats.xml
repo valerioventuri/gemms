@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuite name="com.martiansoftware.nailgun.TestNailStats" tests="1" failures="0" errors="0" time="0.342">
+  <properties>
+    <property name="java.vendor" value="Sun Microsystems Inc."></property>
+    <property name="dist" value="dist"></property>
+    <property name="os.name" value="Linux"></property>
+    <property name="sun.boot.class.path" value="/usr/java/j2sdk1.4.2_03/jre/lib/rt.jar:/usr/java/j2sdk1.4.2_03/jre/lib/i18n.jar:/usr/java/j2sdk1.4.2_03/jre/lib/sunrsasign.jar:/usr/java/j2sdk1.4.2_03/jre/lib/jsse.jar:/usr/java/j2sdk1.4.2_03/jre/lib/jce.jar:/usr/java/j2sdk1.4.2_03/jre/lib/charsets.jar:/usr/java/j2sdk1.4.2_03/jre/classes"></property>
+    <property name="build.instrumented" value="build/ant/prod-instrumented"></property>
+    <property name="sun.java2d.fontpath" value=""></property>
+    <property name="java.vm.specification.vendor" value="Sun Microsystems Inc."></property>
+    <property name="ant.home" value="/opt/eclipse-3.0.1/plugins/org.apache.ant_1.6.2"></property>
+    <property name="zip.src" value="nailgun-src-0.7.1.zip"></property>
+    <property name="java.runtime.version" value="1.4.2_03-b02"></property>
+    <property name="last.version" value="0.7.1"></property>
+    <property name="user.name" value="mlamb"></property>
+    <property name="build.prod" value="build/ant/prod"></property>
+    <property name="src.c" value="src/c"></property>
+    <property name="src.java.test" value="src/java/test"></property>
+    <property name="user.language" value="en"></property>
+    <property name="build" value="build/ant"></property>
+    <property name="nailgun-version.properties" value="src/java/prod/com/martiansoftware/nailgun/nailgun-version.properties"></property>
+    <property name="sun.boot.library.path" value="/usr/java/j2sdk1.4.2_03/jre/lib/i386"></property>
+    <property name="ant.project.name" value="nailgun"></property>
+    <property name="java.version" value="1.4.2_03"></property>
+    <property name="version" value="0.7.1"></property>
+    <property name="user.timezone" value=""></property>
+    <property name="sun.arch.data.model" value="32"></property>
+    <property name="eclipse.connect.port" value="53842"></property>
+    <property name="java.endorsed.dirs" value="/usr/java/j2sdk1.4.2_03/jre/lib/endorsed"></property>
+    <property name="jar" value="nailgun-0.7.1.jar"></property>
+    <property name="sun.cpu.isalist" value=""></property>
+    <property name="docs.javadoc" value="docs/api"></property>
+    <property name="file.encoding.pkg" value="sun.io"></property>
+    <property name="file.separator" value="/"></property>
+    <property name="java.specification.name" value="Java Platform API Specification"></property>
+    <property name="java.class.version" value="48.0"></property>
+    <property name="user.country" value="US"></property>
+    <property name="java.home" value="/usr/java/j2sdk1.4.2_03/jre"></property>
+    <property name="java.vm.info" value="mixed mode"></property>
+    <property name="ant.file" value="/home/mlamb/workspace/nailgun/build.xml"></property>
+    <property name="os.version" value="2.4.22-1.2199.nptl_52.rhfc1.at"></property>
+    <property name="jar.examples" value="nailgun-examples-0.7.1.jar"></property>
+    <property name="src.java.prod" value="src/java/prod"></property>
+    <property name="path.separator" value=":"></property>
+    <property name="java.vm.version" value="1.4.2_03-b02"></property>
+    <property name="src.xdocs" value="src/xdocs"></property>
+    <property name="docs" value="docs"></property>
+    <property name="java.util.prefs.PreferencesFactory" value="java.util.prefs.FileSystemPreferencesFactory"></property>
+    <property name="ant.library.dir" value="/opt/eclipse-3.0.1/plugins/org.apache.ant_1.6.2/lib"></property>
+    <property name="java.awt.printerjob" value="sun.print.PSPrinterJob"></property>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"></property>
+    <property name="zip" value="nailgun-0.7.1.zip"></property>
+    <property name="user.home" value="/home/mlamb"></property>
+    <property name="org.eclipse.ant.ui.ATTR_ANT_PROCESS_ID" value="1107488679653"></property>
+    <property name="java.specification.vendor" value="Sun Microsystems Inc."></property>
+    <property name="java.library.path" value="/usr/java/j2sdk1.4.2_03/jre/lib/i386/client:/usr/java/j2sdk1.4.2_03/jre/lib/i386:/usr/java/j2sdk1.4.2_03/jre/../lib/i386:/usr/lib/mozilla-1.6"></property>
+    <property name="java.vendor.url" value="http://java.sun.com/"></property>
+    <property name="java.vm.vendor" value="Sun Microsystems Inc."></property>
+    <property name="java.runtime.name" value="Java(TM) 2 Runtime Environment, Standard Edition"></property>
+    <property name="java.class.path" value="/home/mlamb/workspace/nailgun/build/ant/test:/home/mlamb/workspace/nailgun/build/ant/prod-instrumented:/home/mlamb/workspace/nailgun/build/ant/prod:/home/mlamb/workspace/nailgun/tools/lib/bcel-5.1.jar:/home/mlamb/workspace/nailgun/tools/lib/jakarta-oro-2.0.8.jar:/home/mlamb/workspace/nailgun/tools/lib/java-getopt-1.0.10.jar:/home/mlamb/workspace/nailgun/tools/lib/jcoverage.jar:/home/mlamb/workspace/nailgun/tools/lib/junit.jar:/home/mlamb/workspace/nailgun/tools/lib/log4j-1.2.8.jar:/usr/java/tools/junit-3.8.1/junit.jar:/opt/eclipse-3.0.1/plugins/org.apache.ant_1.6.2/lib/ant-launcher.jar:/opt/eclipse-3.0.1/plugins/org.apache.ant_1.6.2/lib/ant.jar:/opt/eclipse-3.0.1/plugins/org.apache.ant_1.6.2/lib/ant-junit.jar"></property>
+    <property name="ant.version" value="Apache Ant version 1.6.2 compiled on July 16 2004"></property>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"></property>
+    <property name="java.vm.specification.version" value="1.0"></property>
+    <property name="sun.cpu.endian" value="little"></property>
+    <property name="sun.os.patch.level" value="unknown"></property>
+    <property name="build.debug" value="build/ant/prod-debug"></property>
+    <property name="docs.jcoverage" value="docs/jcoverage"></property>
+    <property name="java.io.tmpdir" value="/tmp"></property>
+    <property name="java.vendor.url.bug" value="http://java.sun.com/cgi-bin/bugreport.cgi"></property>
+    <property name="os.arch" value="i386"></property>
+    <property name="java.awt.graphicsenv" value="sun.awt.X11GraphicsEnvironment"></property>
+    <property name="java.ext.dirs" value="/usr/java/j2sdk1.4.2_03/jre/lib/ext"></property>
+    <property name="user.dir" value="/home/mlamb/workspace/nailgun"></property>
+    <property name="docs.junit" value="docs/junit"></property>
+    <property name="line.separator" value="
+"></property>
+    <property name="java.vm.name" value="Java HotSpot(TM) Client VM"></property>
+    <property name="basedir" value="/home/mlamb/workspace/nailgun"></property>
+    <property name="ant.java.version" value="1.4"></property>
+    <property name="file.encoding" value="UTF-8"></property>
+    <property name="build.test" value="build/ant/test"></property>
+    <property name="java.specification.version" value="1.4"></property>
+    <property name="ant.file.nailgun" value="/home/mlamb/workspace/nailgun/build.xml"></property>
+  </properties>
+  <testcase name="testNailStats" classname="com.martiansoftware.nailgun.TestNailStats" time="0.326"></testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+
+echo 0 > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastscan
+
+echo "Forcing file system scan for $device. Next scan expected within 2 minutes."
+

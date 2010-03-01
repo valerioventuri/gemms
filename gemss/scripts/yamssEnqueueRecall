@@ -1,0 +1,98 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+if [ "$1"x = "-fx" ]; then
+  filelist=$2
+  shift
+  shift
+
+  if [ "$filelist"x = "x" ]; then
+    echo "Error: file list not specified in command line"
+    exit 1
+  fi
+
+  if [ ! -f $filelist ]; then
+    echo "Error: file list $filelist does not exist"
+    exit 1
+  fi
+
+fi
+
+device=$(basename $1)
+shift
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+RECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_RECALL
+
+tmpqueue=$(mktemp /tmp/enqueue.XXXXXXXX)
+
+let i=0
+# Enqueue recalls
+if [ "$filelist"x = "x" ]; then
+
+  for file in $@; do
+
+    nfile=$(readlink -f "$file")
+
+    if [ "$nfile"x != "x" ]; then
+      echo $nfile $(date +%s) 0 >> $tmpqueue
+    fi
+  done
+else
+  cat $filelist | while read -r file; do 
+
+    nfile=$(readlink -f "$file")
+
+    if [ "$nfile"x != "x" ]; then
+      echo $nfile $(date +%s) 0 >> $tmpqueue
+    fi
+
+    # dump out to recall queue every RECALL_LOCAL_DEQUEUE_MAX files
+    let i=$i+1
+    if [ $i -eq $RECALL_LOCAL_DEQUEUE_MAX ]; then
+      let i=0
+
+      # Acquire lock on recall queue
+      lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+      # Create recall queue if not existing
+      touch $RECALLDIR/recall.queue
+
+      cat $tmpqueue >> $RECALLDIR/recall.queue
+
+      # Release lock
+      rm -f $LOCKDIR/recall.queue.lock 
+
+      # clear tmp queue file
+      printf "" > $tmpqueue
+
+    fi
+  done
+fi
+
+# Acquire lock on recall queue
+lockfile -10 -l600 $LOCKDIR/recall.queue.lock
+
+# Create recall queue if not existing
+touch $RECALLDIR/recall.queue
+
+cat $tmpqueue >> $RECALLDIR/recall.queue
+
+# Release lock
+rm -f $LOCKDIR/recall.queue.lock
+
+# Remove tmpqueue
+rm -f $tmpqueue

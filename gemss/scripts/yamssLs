@@ -1,0 +1,48 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+if [ "$1"x = "x" ]; then
+  listarg=.
+else
+  listarg="$@"  
+fi
+
+for entry in $listarg; do
+  if [ -d $entry ]; then
+     dirname=$entry
+  else
+     dirname=$(dirname $entry)
+  fi
+  ls -ls $entry | while read -r myline; do
+    blocks=$(echo $myline | awk '{print $1}')
+    size=$(echo $myline | awk '{print $6}')
+
+    # print "total" or directory name
+    if [ "$blocks"x = "total"x ]; then
+       continue
+    fi
+
+    let totres=$blocks*1024
+
+    file=$(basename $(echo $myline | awk '{print $10}'))
+
+    # if flag storm.migrated is present file can be either migrated or premigrated
+    if $attr -g storm.migrated $dirname/$file >/dev/null 2>&1; then
+      if [ $totres -ge $size ]; then
+        status="p"
+      else
+        status="m"
+      fi
+    else
+      if [ $totres -ge $size ]; then
+        status="r"
+      else
+        status="u"
+      fi
+    fi
+
+    echo $status $myline | awk -v dirname=$dirname -v file=$file '{print $1,$3,$4,$5,$6,$7,$8,$9,$10,dirname"/"file}' | sed "s/\/\//\//g" | sed -e 's/\ -//g' -e 's/.\ d/d/g'
+  done
+
+done

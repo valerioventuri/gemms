@@ -1,0 +1,165 @@
+#!/bin/ksh
+
+# Include global declarations and service routines.
+. /usr/lpp/mmfs/bin/mmglobfuncs
+. /usr/lpp/mmfs/bin/mmsdrfsdef
+
+export device=$arg1
+
+export mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+. /var/mmfs/etc/hsmCommands
+
+export SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+export GPFS_rshPath="/usr/bin/ssh"
+
+export hostnam=$(hostname|cut -d. -f1)
+
+{ 
+     # print PID for logger
+     echo $$
+
+     if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+        echo "Error: missing hsmConfig file in system directory"
+        cleanupAndExit 0        
+     fi
+
+     . $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+     # remove stale migrate files if any
+     rm -f $SYSTEM_DIRECTORY_PATH/YAMSS_MIGRATE/migrate.*
+     rm -f $SYSTEM_DIRECTORY_PATH/YAMSS_MIGRATE/premigrate.*
+
+     # read last scan time
+     let LASTSCAN=$(cat $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastscan 2>/dev/null)
+     if [ $LASTSCAN"x" == "x" ]; then
+        let LASTSCAN=$(date +%s)
+        echo $LASTSCAN > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastscan
+     fi
+
+     # read last report time
+     let LASTREPORT=$(cat $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport 2>/dev/null)
+     if [ $LASTREPORT"x" == "x" ]; then
+        let LASTREPORT=$(date +%s)
+        echo $LASTREPORT > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport
+     fi
+
+     let NOW=$(date +%s)
+     let DELAY=$NOW-$LASTSCAN
+     let DELAYREP=$NOW-$LASTREPORT
+
+     if [ $DELAYREP -gt $REPORT_FREQUENCY ]; then
+        echo $NOW > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport
+        {
+           echo -e "subject: GPFS+TSM report"
+
+           echo "GPFS/TSM migration statistics"
+           $yamssMigrateStat $device $LASTREPORT $NOW
+
+           echo "GPFS/TSM recall statistics"
+           $yamssRecallStat $device $LASTREPORT $NOW
+
+           echo Current drive status
+           for nodeName in $(echo $MIGRATE_NODE_LIST | tr "," " "); do
+              $mmdsh -svL $nodeName ${dsmadmc} -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "query drive" > /tmp/drive_status_$device
+              rc=$?
+              if [ $rc -eq 0 ]; then
+                 { printf "Library Drive Type Online\n"
+                   cat /tmp/drive_status_$device
+                 } | column -t
+                 break
+              fi
+           done
+           echo
+
+           echo Current drive path status
+           for nodeName in $(echo $MIGRATE_NODE_LIST | tr "," " "); do
+              $mmdsh -svL $nodeName ${dsmadmc} -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "query path" > /tmp/drive_path_status_$device
+              rc=$?
+              if [ $rc -eq 0 ]; then
+                 { printf "Server Source Drive Destination Online\n"
+                   cat /tmp/drive_path_status_$device
+                 } | column -t
+                 break
+              fi
+           done
+           echo
+
+           echo Current HSM nodes status
+           for nodeName in $(echo $MIGRATE_NODE_LIST | tr "," " "); do
+              $mmdsh -vL $nodeName uptime
+           done
+           echo
+
+           echo Current space tokens status
+           {
+              printf "Space_token Used(TiB) Quota(TiB)\n"
+              for file in $($mmlsfileset $device | egrep -v root | grep Linked | awk '{print $1}'); do 
+                 used=$($mmlsquota -j $file  | grep FILESET | awk '{print $3*1024./2**40}')
+                 quota=$($mmlsquota -j $file  | grep FILESET | awk '{print $5*1024./2**40}')
+                 total_used_sp=$(echo $total_used_sp $used | awk '{print $1+$2}')
+                 total_quota_sp=$(echo $total_quota_sp $quota | awk '{print $1+$2}')
+                 if [ $used"x" = "x" ]; then
+                    used="n/a"
+                 fi
+                 if [ $quota"x" = "x" ]; then
+                    quota="n/a"
+                 fi
+                 printf "%s %s %s\n" $file $used $quota
+              done
+              printf "Total %s %s\n" $total_used_sp $total_quota_sp
+           } | column -t
+           echo
+           total_available=$(df /dev/$device | egrep -v Mounted | awk '{print $2*1024./2**40}')
+           total_used=$(df /dev/$device | egrep -v Mounted | awk '{print $3*1024./2**40}')
+           echo Filesystem occupancy
+           printf "used(TiB) available(TiB)\n %s %s\n" $total_used $total_available | column -t
+           echo
+
+           echo Current GPFS storage pools status
+           $mmdf $device
+           echo
+
+           echo Current configuration
+           echo
+           cat $mountpoint/system/YAMSS_CONFIG/hsmConfig
+        } | sendmail -f $device@cnaf.infn.it $REPORT_EMAIL_ADDRESS_LIST
+     fi
+
+     # if in draining, exit without scan
+     if [ -f $SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN/migrate.drain ]; then
+        echo Drain file found while starting policy, giving up
+        cleanupAndExit 0
+     fi
+    
+     if [ $DELAY -gt $MIGRATE_SCAN_FREQUENCY ]; then
+        echo $NOW > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastscan
+
+        for nodeName in $(echo $MIGRATE_NODE_LIST | tr "," " ") 
+        do
+
+           $mmcommon on1 $nodeName SHOW_NAME policyCommand $device -m $MIGRATE_RUNNING_THREADS -B $MIGRATE_FILES_PER_THREAD -N $MIGRATE_NODE_LIST -s /var/tmp
+           rc=$? 
+
+           # If the command completed successfully, or if there is an
+           # unacceptable error, there is nothing more we can do.
+           # Error messages and log enties should have been issued by mmremote.
+           if [[ $rc -ne $MM_FsNotMounted && $rc -ne $MM_NotSupported &&
+                 $rc -ne $MM_DaemonDown   && $rc -ne $MM_QuorumWait   ]]
+           then 
+             cleanupAndExit 0  # Always return zero; the actual rc is already logged.
+           fi 
+        done
+        # If we get here, this means that we were not able to find a node
+        # that meets the conditions for running the mmapplypolicy command.
+        # Put an appropriate message in the log and return.
+        print -- "$(date): $mmcmd: Unable to find a node on which to run mmapplypolicy $device"
+     else
+        let NEXT=$LASTSCAN+$MIGRATE_SCAN_FREQUENCY-$NOW
+        echo $NEXT | awk '{mintime=$1/60; strmt=int(mintime+2); if(mintime<2) {strmt="2"}; print "Next filesystem scan expected in",strmt,"minutes"}'
+     fi
+     cleanupAndExit 0
+
+} 2>&1 | $yamssLogger $device startpolicy startpolicy.log
+

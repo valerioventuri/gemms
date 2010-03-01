@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# print PID for logger
+echo $$
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+REMOVEDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_REMOVE
+DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
+
+while [ 1 ]; do
+
+  # Check if parent yamssMonitor is still running
+  nrun=0
+  for pids in $($pidof -x yamssMonitor); do
+    if [ "$pids" = "$PPID" ]; then
+      nrun=1
+    fi
+  done
+  if [ "$nrun"x = "0x" ]; then
+    echo exiting due to yamssMonitor shutdown
+    exit 0
+  fi
+
+  # Check if this is the owner node of the TSM failover group
+  hostnam=$(hostname|cut -d. -f1)
+  ownerid=$(cat $mountpoint/.SpaceMan/hsmfsconfig.xml | grep Ownernode | cut -d">" -f2 | cut -d"<" -f1)
+  ownernode=$($mmlscluster | awk '{print $1,$2}' | grep "^$ownerid " | awk '{print $2}' | cut -d. -f1)
+
+  if [ "$ownernode"x = "x" -o "$hostnam"x = "x" -o "$ownernode"x != "$hostnam"x ]; then
+     exit 0
+  fi
+
+  # sleep 5 seconds or wake up if changes in YAMSS_REMOVE are detected
+  $yamssDirectoryNotify $REMOVEDIR 5
+
+  # Loop on temporary files containing file names to be removed
+  for tmpfile in $(ls -lrt $REMOVEDIR | awk '{print $9}'); do
+    myline=$(cat $REMOVEDIR/$tmpfile)
+    uid=$(echo $myline | awk '{print $1}')
+    gid=$(echo $myline | awk '{print $3}')
+    fname=$(echo $myline | awk '{print $5}')
+
+    $yamssRemoveSingle $mountpoint $fname $uid $gid $REMOVEDIR/$tmpfile
+
+  done
+
+done

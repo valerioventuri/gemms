@@ -1,0 +1,36 @@
+#!/bin/bash
+
+mountpoint=$1
+fname=$2
+uid=$3
+gid=$4
+tmpfile=$5
+
+. /var/mmfs/etc/hsmCommands
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+if [ ! -f $fname ]; then
+  echo "Error: file $fname does not exist"
+  # remove temporary file  
+  rm -f $tmpfile
+  exit 1
+fi
+
+# stubbify file
+if $attr -q -g storm.migrated $fname 2>/dev/null && ! $attr -q -g storm.pinned $fname 2>/dev/null; then
+  echo "Stubbifying file $fname"
+  $dsmmigrate $fname > /dev/null
+  if [ $? = 0 ]; then
+    echo "File $fname stubbified by uid $uid and gid $gid"
+  else
+    echo "Error: file $fname was not stubbified by uid $uid and gid $gid"
+  fi
+elif $attr -q -g storm.pinned $file 2>/dev/null; then
+  echo "File $file is pinned on disk and cannot be stubbified"
+else
+  echo "File $file does not appear to have been migrated to tape and cannot be stubbified"
+fi
+
+# remove temporary file  
+rm -f $tmpfile
+

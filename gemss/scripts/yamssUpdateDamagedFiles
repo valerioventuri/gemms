@@ -1,0 +1,93 @@
+#!/bin/bash
+
+echo $$
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+
+. $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig
+
+while [ 1 ]; do
+
+  sleep 5
+
+  # Check if parent yamssMonitor is still running
+  pid=$($pidof -x yamssMonitor | awk '{print $1}')
+  nrun=0
+  for pids in $($pidof -x yamssMonitor); do
+    if [ "$pids" = "$PPID" ]; then
+      nrun=1
+    fi
+  done
+  if [ "$nrun"x = "0x" ]; then
+    echo exiting due to yamssMonitor shutdown
+    exit 0
+  fi
+
+  # Check if this is the owner node of the TSM failover group
+  hostnam=$(hostname|cut -d. -f1)
+  ownerid=$(cat $mountpoint/.SpaceMan/hsmfsconfig.xml | grep Ownernode | cut -d">" -f2 | cut -d"<" -f1)
+  ownernode=$($mmlscluster | awk '{print $1,$2}' | grep "^$ownerid " | awk '{print $2}' | cut -d. -f1)
+
+  if [ "$ownernode"x = "x" -o "$hostnam"x = "x" -o "$ownernode"x != "$hostnam"x ]; then
+     exit 0
+  fi
+
+  # check if there are damaged entries in af_damaged
+  dmnum=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select count(*) from $TSM_SERVER_DB_NAME.af_damaged")
+  rc=$?
+  if [ $rc != 0 -a $rc != 227 ]; then
+    echo Error while connecting to db2 with exit code $rc
+    exit 1
+  fi
+
+  if [ "$dmnum"x != "0x" ]; then
+
+    echo Found $dmnum damaged files in table af_damaged
+
+    # get hexadecimal string for mountpoint
+    fsname=$(printf $mountpoint | hexdump -v -e '1/1 "%02x"')
+
+    # get object id list of damaged files
+    dmlist=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select bfid from $TSM_SERVER_DB_NAME.af_damaged")
+    rc=$?
+    if [ $rc != 0 -a $rc != 227 ]; then
+      echo Error while connecting to db2 with exit code $rc
+      exit 1
+    fi
+
+    for objid in $dmlist; do
+      selq=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select FILE_NAME,CLASS_NAME from $TSM_SERVER_DB_NAME.spacemgfiles where node_name='$TSM_PROXY_NODE' and object_id=$objid and filespace_name=x'$fsname'")
+      rc=$?
+      if [ $rc != 0 -a $rc != 227 ]; then
+        echo Error while connecting to db2 with exit code $rc
+        exit 1
+      fi
+      if [ "$selq"x != "x" ]; then
+        fname=$(echo $selq | awk '{print $1}')
+        cname=$(echo $selq | awk '{print $2}')
+
+        echo Restoring damaged file $mountpoint$fname with bfid $objid stored in $cname
+        $ng yamssDB2Update $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "delete from $TSM_SERVER_DB_NAME.af_damaged where bfid=$objid" > /dev/null
+        rc=$?
+        if [ $rc != 0 -a $rc != 227 ]; then
+          echo Error while connecting to db2 with exit code $rc
+          exit 1
+        fi
+       
+      fi
+    done
+
+  fi
+
+done

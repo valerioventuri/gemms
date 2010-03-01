@@ -1,0 +1,101 @@
+#!/bin/bash
+
+echo $$
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+
+. $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig
+
+while [ 1 ]; do
+
+  sleep 5
+
+  # Check if parent yamssMonitor is still running
+  pid=$($pidof -x yamssMonitor | awk '{print $1}')
+  nrun=0
+  for pids in $($pidof -x yamssMonitor); do
+    if [ "$pids" = "$PPID" ]; then
+      nrun=1
+    fi
+  done
+  if [ "$nrun"x = "0x" ]; then
+    echo exiting due to yamssMonitor shutdown
+    exit 0
+  fi
+
+  # Check if this is the owner node of the TSM failover group
+  hostnam=$(hostname|cut -d. -f1)
+  ownerid=$(cat $mountpoint/.SpaceMan/hsmfsconfig.xml | grep Ownernode | cut -d">" -f2 | cut -d"<" -f1)
+  ownernode=$($mmlscluster | awk '{print $1,$2}' | grep "^$ownerid " | awk '{print $2}' | cut -d. -f1)
+
+  if [ "$ownernode"x = "x" -o "$hostnam"x = "x" -o "$ownernode"x != "$hostnam"x ]; then
+     exit 0
+  fi
+
+  # check if there are volumes in recoverable error state in view volumes
+  venum=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select count(*) from $TSM_SERVER_DB_NAME.volumes where error_state='YES' and write_errors<=$READWRITE_MAX_ERRORS and read_errors<=$READWRITE_MAX_ERRORS")
+  rc=$?
+  if [ $rc != 0 -a $rc != 227 ]; then
+    echo Error while connecting to db2 with exit code $rc
+    exit 1
+  fi
+
+  if [ "$venum"x != "0x" ]; then
+
+    # get volume names
+    velist=$($dsmadmc -id=$TSM_ID -passw=$TSM_PASSWORD -tabdelimited -dataonly=yes "select volume_name from volumes where error_state='YES' and write_errors<=$READWRITE_MAX_ERRORS and read_errors<=$READWRITE_MAX_ERRORS")
+    rc=$?
+    if [ $rc != 0 ]; then
+      echo Error in dsmadmc with exit code $rc
+      exit 1
+    fi
+
+    for vol in $velist; do
+      echo Restoring to readwrite volume in error state $vol
+      $dsmadmc -id=$TSM_ID -passw=$TSM_PASSWORD -tabdelimited -dataonly=yes "update volume $vol access=readwrite"
+      rc=$?
+      if [ $rc != 0 ]; then
+        echo Error while performing dsmadmc update volume with exit code $rc
+        exit 1
+      fi
+    done
+
+  fi
+
+  # check if there are volumes in unrecoverable error state in view volumes
+  venum=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select count(*) from $TSM_SERVER_DB_NAME.volumes where error_state='YES' and (write_errors>$READWRITE_MAX_ERRORS or read_errors>$READWRITE_MAX_ERRORS)")
+  rc=$?
+  if [ $rc != 0 -a $rc != 227 ]; then
+    echo Error while connecting to db2 with exit code $rc
+    exit 1
+  fi
+
+  if [ "$venum"x != "0x" ]; then
+
+    # get volume names
+    velist=$($dsmadmc -id=$TSM_ID -passw=$TSM_PASSWORD -tabdelimited -dataonly=yes "select volume_name from volumes where error_state='YES' and (write_errors>$READWRITE_MAX_ERRORS or read_errors>$READWRITE_MAX_ERRORS)")
+    rc=$?
+    if [ $rc != 0 ]; then
+      echo Error in dsmadmc with exit code $rc
+      exit 1
+    fi
+
+    for vol in $velist; do
+      echo Volume $vol is in unrecoverable error state
+    done
+
+  fi
+
+done
+

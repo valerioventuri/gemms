@@ -1,0 +1,253 @@
+#!/bin/bash
+
+# print PID for logger
+echo $$
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+RECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_RECALL
+PRELOADDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_PRELOAD
+STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
+DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
+
+check_drain_file() {
+   if [ -f $1 ]; then  
+      return 0
+   fi
+   return 1
+}
+
+
+# Check if drain file is present
+if check_drain_file $DRAINDIR/recall.drain; then
+   exit 0
+fi
+
+# Check if files have been queued for recalls
+
+# Locally queued files
+let numlrec=$(cat $RECALLDIR/recall.queue 2>/dev/null| wc -l)
+
+# File queued with preload library
+let numpreload=$(ls $PRELOADDIR | wc -l)
+let numlrec=$numlrec+$numpreload
+
+# Files queued in StoRM
+if [ "$RECALL_USE_STORM"x = "1x" ]; then
+  numtakeover=$($curl -# -X GET http://$STORM_BACKEND_NODE:9998/recalltable/cardinality/tasks/readyTakeOver)
+  # if numtakeover is empty storm is probably offline
+  if [ "$numtakeover"x = "x" ]; then
+     echo "Error: StoRM recall table service not responding"
+     # do not use storm for the remainder of the life of this process
+     RECALL_USE_STORM=0
+     numtakeover=0
+  fi
+  let numlrec=$numlrec+$numtakeover
+fi
+
+if [ "$numlrec"x = "0x" ]; then
+   exit 0
+fi
+
+# Check if this is the owner node of the TSM failover group
+hostnam=$(hostname|cut -d. -f1)
+ownerid=$(cat $mountpoint/.SpaceMan/hsmfsconfig.xml | grep Ownernode | cut -d">" -f2 | cut -d"<" -f1)
+ownernode=$($mmlscluster | awk '{print $1,$2}' | grep "^$ownerid " | awk '{print $2}' | cut -d. -f1)
+
+if [ "$ownernode"x = "x" -o "$hostnam"x = "x" -o "$ownernode"x != "$hostnam"x ]; then
+   exit 0
+fi
+
+# Create temporary file
+tmprecq=$(mktemp /tmp/tsmrecq.XXXXXXX)
+
+# Get files from preload recalls
+for filewrapper in $(ls $PRELOADDIR); do
+  # insert task into local recall queue
+  filep=$(cat $PRELOADDIR/$filewrapper)
+  if [ "$filep"x != "x" ]; then
+    echo $filep $(date +%s) 0 >> $tmprecq
+    rm -f $PRELOADDIR/$filewrapper
+  fi
+done
+
+# Get files from storm recall table
+if [ "$RECALL_USE_STORM"x = "1x" -a "$numtakeover"x != "0x" ]; then
+
+   # takes over tasks from StoRM recall table
+   $curl -# -H "Content-Type:text/plain" -X PUT -d first=$RECALL_STORM_DEQUEUE_MAX http://$STORM_BACKEND_NODE:9998/recalltable/tasks 2>/dev/null | tr '#' '\n' | tr "{" " " | tr "}" " " | while read -r myline; do
+     taskid=$(echo "$myline"|awk '{print $1}')
+     fname=$(echo "$myline"|awk '{print $5}')
+     cattr=$($attr -q -g TSMRecT $fname 2>/dev/null)
+
+     # check if file is already on disk. This should never happen... but who knows
+     sbss=$(ls -ls $fname|awk '{print $1,$6}')
+     blks=$(echo $sbss|awk '{print $1}')
+     size=$(echo $sbss|awk '{print $2}')
+     let ress=$blks*1024
+     if [ $ress -ge $size ]; then
+        echo "Warning! A recall was ordered for file $fname but it is already on disk. Allocated size is $ress bytes while size is $size"
+        continue
+     fi
+
+     # if the file was already under recall, append taskid to the existing extended attribute
+     if [ "$cattr"x != x ]; then
+        nattr=$cattr","$taskid
+     else
+        nattr=$taskid
+     fi
+
+     # should check whether nattr is too long (1022 bytes), to be fixed
+     echo "Setting extended attribute with taskid list $nattr on file $fname"
+     $attr -q -s TSMRecT -V $nattr $fname 2>/dev/null
+
+
+     # insert task into local recall queue
+     nfile=$(readlink -f "$fname")
+     if [ $? = 0 ]; then
+       echo $nfile $(date +%s) 0 >> $tmprecq
+     fi
+
+   done
+
+fi
+
+# Acquire lock on recall queue
+lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+# Create recall queue file if not existing
+touch $RECALLDIR/recall.queue
+
+# Dump temporary file to recall.queue
+cat $tmprecq >> $RECALLDIR/recall.queue
+rm -f $tmprecq
+
+# release lock on recall queue
+rm -f $LOCKDIR/recall.queue.lock
+
+let numrec=$(cat $RECALLDIR/recall.queue | wc -l)
+if [ $numrec -ne 0 ]; then
+
+   # temporary directory
+   tmpdir=$(mktemp -d /tmp/tsmrecall.XXXXXXXX)
+
+   # determine number of files to dequeue from recall queue
+   let nlines=0
+   if [ $numrec -gt $RECALL_LOCAL_DEQUEUE_MAX ]; then
+     let nlines=$numrec-$RECALL_LOCAL_DEQUEUE_MAX
+   fi
+
+   # Acquire lock on recall queue
+   lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+   # extract files from recall queue and build new queue
+   cat $RECALLDIR/recall.queue | head -n $RECALL_LOCAL_DEQUEUE_MAX > $tmpdir/recall.queue.proc.tmp
+   cat $RECALLDIR/recall.queue | tail -n $nlines > $tmpdir/recall.queue.new
+   touch $tmpdir/recall.queue.new
+   mv -f $tmpdir/recall.queue.new $RECALLDIR/recall.queue
+
+   # release lock on recall queue
+   rm -f $LOCKDIR/recall.queue.lock
+
+   # read one by one all dequeued files and set extended attributes for recall date and retry
+   while read -r myline; do
+
+     fname=$(echo "$myline"|awk '{print $1}')
+     fdate=$(echo "$myline"|awk '{print $2}')
+     fretry=$(echo "$myline"|awk '{print $3}')
+     $attr -q -s TSMRecD -V $fdate $fname
+     $attr -q -s TSMRecR -V $fretry $fname
+
+     # if file has no pin extended attribute or it has expired set it for implicit pinning the file on disk
+     now=$(date +%s)
+     expdate=$($attr -q -g storm.pinned $fname 2>/dev/null)
+     rc=$?
+     if [ "$expdate"x = "x" ]; then
+       expdate=0
+     fi
+     if [ $rc != 0 -o $now -gt $expdate ]; then 
+       let expdate=$now+$RECALL_IMPLICIT_PINTIME
+       if $attr -g storm.migrated $fname >/dev/null 2>&1; then
+         echo Setting implicit pinning until $expdate for file $fname
+         $attr -q -s storm.pinned -V $expdate $fname 2>/dev/null
+       fi
+     fi
+
+   done < $tmpdir/recall.queue.proc.tmp
+   cat $tmpdir/recall.queue.proc.tmp | awk '{print $1}' > $tmpdir/recall.queue.proc
+
+   # call the dsmrecall with preview option to produce tape ordered lists
+   cd $tmpdir
+   $yamssWatchdog -t $RECALL_REORDER_TIMEOUT $dsmrecall -t -p -filelist=$tmpdir/recall.queue.proc
+
+   # check whether the process exited successfully and/or it was terminated by a signal
+   signum=$?
+   if [ $signum -ne 0 ]; then
+
+     if [ $signum -gt 128 -a $signum -lt 193 ]; then	# it is a signal
+       let signum=$signum-128
+       echo Recall reordering process was killed by signal $signum
+     else
+       echo Recall reordering process exited with error status $signum
+     fi
+
+     # enqueue again files for recall
+     for filefail in $(cat $tmpdir/recall.queue.proc); do
+       $yamssEnqueueRecallSingle $device $filefail 0
+       echo "Recall of $filefail enqueued again due to termination of recall reordering process"
+     done
+
+     # clean up and exit
+     cd - > /dev/null
+     rm -rf $tmpdir
+     exit 1
+
+   fi
+
+   # Acquire lock on recall queue
+   lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+   # loop of list of tape ordered files
+   for file in $(ls | grep filelist.ordered.tape); do
+      if [ -f $RECALLDIR/$file ]; then
+        # if ordered list for that tape already exists then add to the existing file and reorder
+
+        if [ "$file" = "filelist.ordered.tape.00000000" ]; then    # special file for problematic files
+           # sort by file name
+           cat $file $RECALLDIR/$file | sort -u -k4 > $file.tmp
+        else
+           # sort by tape slot
+           cat $file $RECALLDIR/$file | awk --non-decimal-data 'BEGIN{FS="-"}{printf "%s-%s-%d-%s",$1,$2,"0x"$3,$4; for (i=5;i<=NF;i++) printf "-%s",$i; printf "\n"}' | sort -t- -g -k3 -u | awk 'BEGIN{FS="-"}{printf "%s-%s-%X-%s",$1,$2,$3,$4; for (i=5;i<=NF;i++) printf "-%s",$i; printf "\n"}' > $file.tmp
+        fi
+
+        # keep the date of the first recall for that tape
+        touch -r $RECALLDIR/$file $file.tmp
+        mv -f $file.tmp $RECALLDIR/$file
+      else
+        mv -f $file $RECALLDIR/$file
+      fi
+
+   done
+
+   # release lock on recall queue
+   rm -f $LOCKDIR/recall.queue.lock
+
+   cd - > /dev/null
+   rm -rf $tmpdir
+
+fi  

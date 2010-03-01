@@ -1,0 +1,283 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+device=$4
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+# GPFS sets the timezone on the first node...
+unset TZ
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+MIGRATEDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_MIGRATE
+STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
+DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
+
+starttime=$(date +%s)
+
+function strstr () {
+    # if s2 points to a string of zero length, strstr echoes s1
+    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
+
+    # strstr echoes nothing if s2 does not occur in s1
+    case "$1" in
+    *$2*) ;;
+    *) return 1;;
+    esac
+
+    # use the pattern matching code to strip off the match and everything
+    # following it
+    first=${1/$2*/}
+
+    # then strip off the first unmatched portion of the string
+    echo "${1##$first}"
+}
+
+check_drain_file() {
+   if [ -f $1 ]; then  
+      echo Drain file $1 found, giving up 
+      exit 0  
+   fi
+}
+
+read_volume_name() {
+  str=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "show bfo $1" | grep "Volume Name" | head -n 1)
+  volname=$(strstr "$str" "Volume Name" |awk '{print $3}')
+
+  if [ "$volname"x != "x" ]; then
+    echo $volname
+    return 0
+  fi
+  return 1
+}
+
+tsm_select() {
+  $dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select $1"
+  return $?
+}
+
+write_stat() {
+  p1=$1
+  p2=$2
+  p3=$3
+  p4=$4
+  shift
+  shift
+  shift
+  shift
+
+  # next line is temporarily commented out
+  # lockfile -1 -l10 $p2 2>/dev/null
+
+  if [ $p4 = '0' ]; then
+    stat=OK
+  else
+    stat=ERR
+  fi
+
+  echo $p3 $stat $1 $2 $3 $4 $5 $6 $7 $8 $9 >> $p1
+
+  # next line is temporarily commented out
+  # rm -f $p2
+
+  return $p4
+}
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+if [ "$1" = "TEST" ]; then   
+   # Should make a check of the hsm node, for the moment it does nothing
+   sleep 0
+fi
+
+if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
+
+   # check whether a drain file has been created. If yes, exit
+   check_drain_file $DRAINDIR/migrate.drain
+
+   # in case of MIGRATE check if file system or group quota occupancy is below threshold
+   if [ "$1" = "MIGRATE" ]; then
+      # if no group name then check filesystem
+      if [ "$5"x = "x" ]; then
+        occupancy=$(df -P $mountpoint | tail -n 1 | awk '{print $5}' | tr "%" " ")
+      # else check group quota
+      else
+        # for some strange reason we need to use su 
+        occupancy=$(su - -c "$mmlsquota -v -g $5 $devicei" | egrep "^$device" | awk '{print int($3/$4*100)}') 
+      fi
+      # if occupancy is unknown exit with error
+      if [ "$occupancy"x = "x" ]; then
+         echo Error while getting quota for group $5 and device $device
+         exit 0
+      fi
+
+      # if occupancy is OK exit silently
+      if [ $occupancy -le $GARBAGE_COLLECTOR_THRESHOLD ]; then
+         exit 0
+      fi
+   fi
+
+   hostnam=$(hostname|cut -d. -f1)
+
+   if [ "$1" = "PREMIGRATE" ]; then
+     echo Started premigration $2.$3 on node $hostnam
+   else
+     echo Started migration $2.$3 on node $hostnam
+   fi
+
+   # generate list of files to be premigrated or migrated
+   awk '{print $5}' $2 > $2.$3.hsm 
+ 
+   # generate run file for this premigration of migration
+   if [ "$1" = "PREMIGRATE" ]; then
+     touch $MIGRATEDIR/premigrate.running.$hostnam.$(basename $2).$3
+   else
+     touch $MIGRATEDIR/migrate.running.$hostnam.$(basename $2).$3
+   fi
+
+   if [ -f $2.$3.hsm.mig ]; then
+     rm -f $2.$3.hsm.mig
+   fi
+
+   # check which files are actually to be premigrated
+   touch $2.$3.hsm.mig
+   for file in $(cat $2.$3.hsm); do
+     # if automigrate flag is set, migrate everything
+     if [ "$MIGRATE_AUTO"x = "1x" -o "$1" = "MIGRATE" ]; then
+
+       # check if file is not pinned on disk
+       now=$(date +%s)
+       expdate=$($attr -q -g storm.pinned $file 2>/dev/null)
+       rc=$?
+       if [ "$expdate"x = "x" ]; then
+         expdate=0
+       fi
+       if [ $rc != 0 -o $now -gt $expdate ]; then
+         echo $file >> $2.$3.hsm.mig
+       fi
+
+     else
+       # selective migration: file candidates for migration have storm.premigrate libattr extended attribute set
+       if $attr -g storm.premigrate $file >/dev/null 2>&1; then
+         echo $file >> $2.$3.hsm.mig
+       else
+         # check if max retention on disk has expired. If yes, automigrate the file
+         mtime=$(ls -l --time-style=+%s $file | awk '{print $6}')
+         now=$(date +%s)
+         let diff=$now-$mtime
+         if [ $diff -gt $MIGRATE_MAX_RETENTION ]; then
+           echo "File $file was not flagged for premigration after $diff seconds (threshold is $MIGRATE_MAX_RETENTION seconds). It will be automigrated"
+           echo $file >> $2.$3.hsm.mig
+         fi
+       fi
+     fi
+   done
+
+   startmigtime=$(date +%s)  
+   if [ "$1" = "PREMIGRATE" ]; then   
+      $yamssSigTermUnblock $dsmmigrate -P -FIlelist=$2.$3.hsm.mig > /dev/null 
+   else
+      $yamssSigTermUnblock $dsmmigrate -FIlelist=$2.$3.hsm.mig > /dev/null
+   fi
+   stopmigtime=$(date +%s)
+
+   # total size of files to be premigrated
+   tsize=$(for f in $(cat $2.$3.hsm.mig); do ls -l $f; done | awk '{t+=$5}END{printf("%d\n",t)}')
+
+   # get information for filling the log file with statistics
+   for file in $(cat $2.$3.hsm.mig); do
+
+     # creation time
+     filetime=$(ls -l --time-style=+%s $file | awk '{print $6}')
+     # file size in bytes
+     filesize=$(ls -l $file | awk '{print $5}')
+     # get status of the file: m, p, r
+     status=$($dsmls $file | grep $(basename $file) | tail -n1 | awk '{print $4}')
+
+     rc=1
+     extobjid=0
+     # check if file is still resident, i.e. if migration failed
+     if [ $status"x" != "x" -a $status"x" != "rx" ]; then
+        if [ "$1" = "PREMIGRATE" -o $status"x" = "mx" ]; then
+          rc=0
+        fi
+
+        # remove extended attribute for migration candidate
+        $attr -r storm.premigrate $file >/dev/null 2>&1
+        # add extended attribute to flag it is migrated
+        $attr -s storm.migrated -V "" $file >/dev/null 2>&1
+
+        extobjid=$($dsmls -extobjid $file | grep $(basename $file) | tail -n1 | awk '{print $1}')
+        rc_a=$?
+        objectid=$(tsm_select "object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid='$extobjid'")
+        rc_b=$?
+        volname=$(read_volume_name $objectid)
+        rc_c=$?
+
+        if [ $rc_a != 0 -o  $rc_b != 0 -o  $rc_c != 0 ]; then
+           volname=null 
+        fi
+     else
+        volname=null
+     fi
+
+     if [ $volname"x" = "x" ]; then
+        volname=null 
+     fi
+
+     # get insert time from TSM DB
+     if [ $extobjid"x" != "0x" ]; then 
+       inserttime=$($dsmadmc -id=$TSM_ID -pass=$TSM_PASSWORD -tabdelimited -dataonly=yes "select INSERT_DATE from spacemgfiles where filespace_name='$mountpoint' and EXTOBJID='$extobjid'"|cut -d. -f1 | tr "-" " " | tr ":" " " | awk '{print mktime($0)}')
+     else
+       inserttime=$(date +%s)
+     fi
+
+     if [ $inserttime"x" = "x" ]; then
+       inserttime=$(date +%s)
+     fi 
+
+     # write out the statistics log
+     if [ "$1" = "PREMIGRATE" ]; then
+        write_stat $STATDIR/premigrate $LOCKDIR/premigrate.write_stat PRE $rc $inserttime $startmigtime $stopmigtime $filetime $file $filesize $tsize $(hostname) $volname
+     else
+        write_stat $STATDIR/migrate $LOCKDIR/migrate.write_stat MIG $rc $inserttime $startmigtime $stopmigtime $filetime $file $filesize $tsize $(hostname) $volname
+     fi
+
+     # premigrate files to tape
+     if [ $rc = "0" ]; then
+        if [ "$1" = "PREMIGRATE" ]; then
+           echo $hostnam: Premigration of file $file succeded
+        else
+           echo $hostnam: Migration of file $file succeded
+        fi
+     else
+        if [ "$1" = "PREMIGRATE" ]; then
+           echo $hostnam: Premigration of file $file failed
+        else
+           echo $hostnam: Migration of file $file failed
+        fi
+     fi
+
+  done
+
+  if [ "$1" = "PREMIGRATE" ]; then
+     echo Finished premigration $2.$3 on node $hostnam
+    # delete run file for this migration 
+    rm -f $MIGRATEDIR/premigrate.running.$hostnam.$(basename $2).$3
+  else
+    echo Finished migration $2.$3 on node $hostnam
+    # delete run file for this migration 
+    rm -f $MIGRATEDIR/migrate.running.$hostnam.$(basename $2).$3
+  fi
+
+fi
+

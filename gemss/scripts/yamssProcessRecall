@@ -1,0 +1,327 @@
+#!/bin/bash
+
+# print PID for logger
+echo $$
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+RECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_RECALL
+STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
+DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
+
+check_drain_file() {
+   if [ -f $1 ]; then  
+      return 0
+   fi
+   return 1
+}
+
+function strstr () {
+    # if s2 points to a string of zero length, strstr echoes s1
+    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
+
+    # strstr echoes nothing if s2 does not occur in s1
+    case "$1" in
+    *$2*) ;;
+    *) return 1;;
+    esac
+
+    # use the pattern matching code to strip off the match and everything
+    # following it
+    first=${1/$2*/}
+
+    # then strip off the first unmatched portion of the string
+    echo "${1##$first}"
+}
+
+
+tsm_select() {
+  $dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select $1"
+  return $?
+}
+
+read_volume_name() {
+  str=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "show bfo $1" | grep "Volume Name" | head -n 1)
+  volname=$(strstr "$str" "Volume Name" |awk '{print $3}')
+
+  if [ "$volname"x != "x" ]; then
+    echo $volname
+    return 0
+  fi
+  return 1
+}
+
+
+write_stat() {
+  p1=$1
+  p2=$2
+  p3=$3
+  p4=$4
+  shift
+  shift
+  shift
+  shift
+
+  # next line is temporarily commented out
+  # lockfile -1 -l10 $p2 2>/dev/null
+
+  if [ $p4 = '0' ]; then
+    stat=OK
+  else
+    stat=ERR
+  fi
+
+  echo $p3 $stat $1 $2 $3 $4 $5 $6 $7 $8 $9 >> $p1
+
+  # next line is temporarily commented out
+  # rm -f $p2
+
+  return $p4
+}
+
+# check if drain file is present
+if check_drain_file $DRAINDIR/recall.drain; then
+   exit 0
+fi
+
+# count number of file ordered tape lists pending. If zero exit immediately
+numreclists=$(ls $RECALLDIR | grep filelist.ordered.tape | egrep -v running | egrep -v filelist.ordered.tape.00000000 | wc -l)
+
+if [ "$numreclists"x = "0x" ]; then
+   exit 0
+fi
+
+# acquire lock on recall queue
+lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+# first look for the oldest tape ordered file list and see whether the date is over threshold
+# this avoids recall starvation
+recfile=0
+now=$(date +%s)
+reclist=$(ls -lrt --time-style=+%s $RECALLDIR | grep filelist.ordered.tape | egrep -v running | egrep -v filelist.ordered.tape.00000000 | awk -v now=$now -v maxret=$RECALL_MAX_RETENTION -v recalldir=$RECALLDIR '{if((now-$6)>maxret) print recalldir"/"$7}')
+for file in $reclist; do
+   # try to acquire lock for tape
+   lockfile -1 -r1 $LOCKDIR/recall.$(basename $file) 2>/dev/null
+   if [ $? -eq 0 ]; then
+      recfile=$file
+      break
+   fi
+done
+
+# then look for the tape ordered file with the largest number of files
+if [ "$recfile"x = "0x" ]; then
+  reclist=$(for file in $(ls $RECALLDIR | grep filelist.ordered.tape | egrep -v running | egrep -v filelist.ordered.tape.00000000); do wc -l $RECALLDIR/$file; done | sort -g -r | awk '{print $2}') 
+  for file in $reclist; do
+     # try to acquire lock for tape
+     lockfile -1 -r1 $LOCKDIR/recall.$(basename $file) 2>/dev/null
+     if [ $? -eq 0 ]; then
+        recfile=$file
+        break
+     fi
+  done
+fi
+
+# if one tape ordered list to process is found, recall it
+if [ "$recfile"x != "0x" ]; then
+  # create pointer (not lock) file for the ongoing tape recall
+  mv -f $recfile $recfile.running
+  # list of files is taken. Release lock on recall queue
+  rm -f $LOCKDIR/recall.queue.lock    
+    
+  # create temporary working directory
+  tmpdir=$(mktemp -d /tmp/tsmrecall.XXXXXXXX)
+  cd $tmpdir
+
+  # generate filelist collection file
+  let size=0
+  let nfiles=0
+  while read -r myline; do
+    fn=$(echo $myline|awk '{print $4}')
+    # file does not exist, skip
+    if [ ! -f $fn ]; then
+       continue
+    fi
+
+    let fs=$(ls -l $fn|awk '{print $5}')
+    let bs=$(ls -s $fn|awk '{print $1}')*512;
+    # file is already on disk, skip
+    if [ $bs -ge $fs ]; then
+       continue
+    fi
+
+    let nfiles=$nfiles+1
+    let size=$size+$fs
+
+    echo $myline >> $(basename $recfile)
+  done < $recfile.running
+
+  echo $nfiles $size ./$(basename $recfile) > filelist.ordered.collection
+
+  # start tape ordered recall
+  startrectime=$(date +%s)
+  $yamssWatchdog -t $RECALL_PROCESS_TIMEOUT $dsmrecall -t -filelist=filelist.ordered.collection
+  # check whether the process was terminated by a signal
+  signum=$?
+  if [ $signum -gt 128 ]; then
+    let signum=$signum-128
+    echo Recall process was killed by signal $signum
+  fi
+  stoprectime=$(date +%s)
+
+  cd - > /dev/null
+  rm -rf $tmpdir
+
+  mystat=$(mktemp /tmp/tsmstat.XXXXXXXX)
+  cat $recfile.running | awk '{print $4}' > $mystat
+
+  # release pointer and lock for the recalled tape
+  rm -f $recfile.running
+  rm -f $LOCKDIR/recall.$(basename $recfile)
+
+  # write out recall statistics
+  tsize=$(for f in $(cat $mystat); do ls -l $f; done | awk '{t+=$5}END{printf("%d\n",t)}')
+  for file in $(cat $mystat); do
+     # creation time
+     filetime=$(ls -l --time-style=+%s $file | awk '{print $6}')
+     # file size in bytes
+     filesize=$(ls -l $file | awk '{print $5}')
+     # blocks of file on disk
+     fileblocks=$(ls -s $file | awk '{print $1}')
+
+     # was the recall completed?
+     let ondisk=$fileblocks*1024
+     if [ $ondisk -lt $filesize ]; then
+        echo "File $file was not recalled. Blocks on disk give $ondisk bytes while file size is $filesize"
+        rc=1
+        stat=REC
+     # was file migrated?
+     elif $attr -g storm.migrated $file >/dev/null 2>&1; then 
+        rc=0
+        stat=REC
+     else
+        echo "File $file does not appear to be migrated, but is entirely on disk"
+        rc=0
+        stat=RES
+     fi
+
+     if [ "$stat"x != "RES"x ]; then
+       extobjid=$($dsmls -extobjid $file | grep $(basename $file) | tail -n1 | awk '{print $1}')
+       rc_a=$?
+       objectid=$(tsm_select "object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid='$extobjid'")
+       rc_b=$?
+       volname=$(read_volume_name $objectid)
+       rc_c=$?
+
+       if [ $rc_a != 0 -o  $rc_b != 0 -o  $rc_c != 0 ]; then
+         volname=null 
+       fi
+     else
+       volname=null
+     fi
+
+     if [ $volname"x" = "x" ]; then
+       volname=null 
+     fi
+
+     # get enqueue time from libattr extented attributes
+     enqueuetime=$($attr -q -g TSMRecD $file 2>/dev/null)
+
+     if [ $enqueuetime"x" = "x" ]; then
+       enqueuetime=$(date +%s)
+     fi
+
+     # write stats to log file
+     write_stat $STATDIR/recall $LOCKDIR/recall.write_stat $stat $rc $enqueuetime $startrectime $stoprectime $filetime $file $filesize $tsize $(hostname) $volname
+
+     hostnam=$(hostname| cut -d. -f1)
+
+     if [ $rc = "0" ]; then
+       echo Recall of file $file succeded
+
+       # update recall table if StoRM is used. Warning: error conditions are not handled. If restful service is unavailable recall table is silently not updated. To be fixed
+       if [ "$RECALL_USE_STORM"x = "1x" ]; then
+          for taskid in $($attr -q -g TSMRecT $file 2>/dev/null | tr "," " "); do 
+             echo "Setting status=success for file $file and taskid $taskid"
+             curl -# -H "Content-Type:text/plain" -X PUT -d "status=0" http://$STORM_BACKEND_NODE:9998/recalltable/task/$taskid 2>/dev/null
+          done
+
+          # remove extended attribute with taskids
+          $attr -q -r TSMRecT $file 2>/dev/null
+       fi       
+
+     else
+ 
+       # if the file appears erronously as premigrated, this is a severe error and we have to restore the file
+       status=$($dsmls $file | grep $(basename $file) | tail -n1 | awk '{print $4}')
+       if [ "$status"x = "px" ]; then
+          echo "Severe error. Recall for file $file failed but file appears as premigrated. Trying to restore it"
+
+          # try to restore the file to migrated state, cross the fingers... A command to restore a damaged stub would be preferred. To be done
+
+          # set environment variable used by the preload stat library
+          export YAMSS_PRELOAD_STAT_FILE_NAME=$file
+          LD_PRELOAD=$yamssPreloadStatLibrary $dsmmigrate $file > /dev/null
+
+          # check if restore was successful, if not an alarm should be immediately filed... for the moment just log it
+          status=$($dsmls $file | grep $(basename $file) | tail -n1 | awk '{print $4}')
+          if [ "$status"x = "px" ]; then
+             echo "Alarm! Restore of file $file failed. File is in inconsistent state!"
+          elif [ "$status"x = "mx" ]; then
+             echo "File $file restored to migrated state"
+          else
+             echo "Alarm! Restore of file $file failed. File is in inconsistent state!"
+          fi 
+          
+       fi
+
+       # extract from extended attributes the number of recalls actually (re)tried
+       let fretry=$($attr -q -g TSMRecR $file 2>/dev/null)
+       # if RECALL_MAX_RETRY allow for another trial do it and increase the counter in the extended attribute
+       if [ $fretry -lt $RECALL_MAX_RETRY ]; then
+          let n=$fretry+1
+          # enqueue again the file for recall
+          $yamssEnqueueRecallSingle $device $file $n
+          echo "Recall of $file enqueued for retry $n (max $RECALL_MAX_RETRY)"
+       else
+          # recall failed, set extended attribute with the exact time of failure
+          fdate=$(date +%s)
+          $attr -q -s TSMErrD -V $fdate $file 
+          echo Recall of file $file failed
+
+          # update recall table if StoRM is used. Warning: error conditions are not handled. If restful service is unavailable recall table is silently not updated. To be fixed
+          if [ "$RECALL_USE_STORM"x = "1x" ]; then
+             for taskid in $($attr -q -g TSMRecT $file 2>/dev/null | tr "," " "); do 
+                echo "Setting status=failure for file $file and taskid $taskid"
+                curl -# -H "Content-Type:text/plain" -X PUT -d "status=3" http://$STORM_BACKEND_NODE:9998/recalltable/task/$taskid 2>/dev/null
+             done
+
+             # remove extended attribute with taskids
+             $attr -q -r TSMRecT $file 2>/dev/null
+
+          fi
+
+       fi
+     fi
+  done
+  rm -rf $mystat
+
+else
+  # release lock on recall queue
+  rm -f $LOCKDIR/recall.queue.lock
+  sleep 10
+fi

@@ -1,0 +1,4 @@
+Testsuite: com.martiansoftware.nailgun.TestAliasManager
+Tests run: 1, Failures: 0, Errors: 0, Time elapsed: 0.321 sec
+
+Testcase: testAliasManager took 0.305 sec

@@ -1,0 +1,69 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+
+if [ "$2"x = "x" ]; then
+  echo Missing file name
+  exit 1
+fi
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+function strstr () {
+    # if s2 points to a string of zero length, strstr echoes s1
+    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
+
+    # strstr echoes nothing if s2 does not occur in s1
+    case "$1" in
+    *$2*) ;;
+    *) return 1;;
+    esac
+
+    # use the pattern matching code to strip off the match and everything
+    # following it
+    first=${1/$2*/}
+
+    # then strip off the first unmatched portion of the string
+    echo "${1##$first}"
+}
+
+read_volume_name() {
+  str=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "show bfo $1" | grep "Volume Name" | head -n 1)
+  volname=$(strstr "$str" "Volume Name" |awk '{print $3}')
+
+  if [ "$volname"x != "x" ]; then
+    echo $volname
+    return 0
+  fi
+  return 1
+}
+
+extobjid=$($dsmls -extobjid $2 | grep $(basename $2) | tail -n1 | awk '{print $1}')
+rc_a=$?
+objectid=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid='$extobjid'")
+rc_b=$?
+volname=$(read_volume_name $objectid)
+rc_c=$?
+if [ $rc_a != 0 -o  $rc_b != 0 -o  $rc_c != 0 ]; then
+  volname=null 
+fi
+
+if [ "$extobjid"x = "Resident"x ]; then
+  echo File $2 is disk resident
+elif [ "$volname"x = "null"x ]; then
+  echo Error occurred while retrieving tape name for file $2
+  exit 1
+else
+  echo File $2 is on tape $volname
+fi

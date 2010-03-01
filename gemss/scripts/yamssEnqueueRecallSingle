@@ -1,0 +1,38 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+device=$(basename $1)
+shift
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+RECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_RECALL
+
+# Acquire lock on recall queue
+lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+# Create recall queue if not existing
+touch $RECALLDIR/recall.queue
+
+# Add single entry to recall queue
+nfile=$(readlink -f "$1")
+if [ $? = 0 ]; then
+  echo $nfile $(date +%s) $2 >> $RECALLDIR/recall.queue
+fi
+
+
+# Release lock
+rm -f $LOCKDIR/recall.queue.lock
+

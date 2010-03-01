@@ -1,0 +1,80 @@
+#!/bin/bash
+
+. /var/mmfs/etc/hsmCommands
+
+longlist=0
+if [ "$1"x = "-lx" ]; then
+  longlist=1
+  shift
+fi
+
+device=$1
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+if [ "$longlist"x = "0x" ]; then
+  wc -l $mountpoint/system/YAMSS_RECALL/* | while read -r myline; do
+     numf=$(echo $myline | awk '{print $1}')    
+     namt=$(echo $myline | awk '{print $2}')    
+     echo $numf $(basename $namt)
+  done | sed -e 's/recall\.queue/queued/g' -e 's/filelist\.ordered\.tape\.//g' | awk '{print $2,$1}' | column -t | tr "." " "
+  exit 0
+fi
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+RECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_RECALL
+
+# Acquire lock on recall queue
+lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+# Create recall queue if not existing
+touch $RECALLDIR/recall.queue
+
+# Copy recall dir to temporary directory
+tmpdir=$(mktemp -d /tmp/yamssrecdir.XXXXXXXX)
+cp -a $RECALLDIR $tmpdir
+
+# Release lock
+rm -f $LOCKDIR/recall.queue.lock
+
+# List recall queue (not yet assigned to tape)
+echo "recall.queue:"
+let num=$(cat $tmpdir/YAMSS_RECALL/recall.queue 2>/dev/null | wc -l)
+if [ $num = 0 ]; then
+  echo none
+else
+  nl -ba $tmpdir/YAMSS_RECALL/recall.queue
+fi
+echo
+
+# List recalls assigned to a recall threads
+for file in $(ls $tmpdir/YAMSS_RECALL | grep running); do
+  echo $file:
+  cat $tmpdir/YAMSS_RECALL/$file | awk '{print $4}' | nl -ba
+  echo
+done
+
+# List recalls not yet assigned to a recall thread
+for file in $(ls $tmpdir/YAMSS_RECALL | grep filelist | grep -v running | grep -v 00000000); do
+  echo $file:
+  cat $tmpdir/YAMSS_RECALL/$file | awk '{print $4}' | nl -ba
+  echo
+done
+
+# List problematic recalls
+for file in $(ls $tmpdir/YAMSS_RECALL | grep 00000000); do
+  echo Problematic:
+  cat $tmpdir/YAMSS_RECALL/$file | awk '{print $4}' | nl -ba
+  echo
+done
+
+rm -rf $tmpdir

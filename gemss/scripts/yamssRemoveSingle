@@ -1,0 +1,82 @@
+#!/bin/bash
+
+mountpoint=$1
+fname=$2
+uid=$3
+gid=$4
+tmpfile=$5
+
+. /var/mmfs/etc/hsmCommands
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+if [ ! -f $fname ]; then
+  echo "Error: file $fname does not exist"
+  # remove temporary file  
+  rm -f $tmpfile
+  exit 1
+fi
+
+# get external object id
+extobjid=$($dsmls -extobjid $fname | grep $(basename $fname) | tail -n1 | awk '{print $1}')
+if [ "$extobjid"x = "x" ]; then
+  echo "Error: cannot get extobjid for file $fname"
+  # remove temporary file  
+  rm -f $tmpfile
+  exit 1
+fi
+
+# if file is not resident get objinfo from spaceman_objects and try to update it (expire bit and date)
+if [ "$extobjid" != "Resident" ]; then
+
+  qsos=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select nr.nodeid,fs.fsid,substr(hex(objinfo),1,37)||' '||substr(hex(objinfo),38,1)||' '||substr(hex(objinfo),39,64)||' '||substr(hex(objinfo),103,8)||' '||substr(hex(objinfo),111) from $TSM_SERVER_DB_NAME.spaceman_objects as sos left join $TSM_SERVER_DB_NAME.nodes nr on (sos.nodeid=nr.nodeid) left join $TSM_SERVER_DB_NAME.filespaces fs on (sos.fsid=fs.fsid) where nr.nodename='$TSM_PROXY_NODE' and fs.fsname='$mountpoint' and state=1 and extobjid=x'$extobjid'")
+  rc=$?
+  if [ $rc != 0 -a $rc != 227 ]; then
+    echo Error while connecting to db2 with exit code $rc
+    # remove temporary file  
+    rm -f $tmpfile
+    exit 1
+  fi
+
+  nrid=$(echo $qsos | awk '{print $1}')
+  fsid=$(echo $qsos | awk '{print $2}')
+  objinfo=$(echo $qsos | awk '{print $3,$4,$5,$6,$7}')
+
+  # save old objinfo
+  oldobjinfo=$(echo $objinfo | awk '{printf "%s%s%s%s%s\n",$1,$2,$3,$4,$5}')
+
+  # build new objinfo
+  newobjinfo=$(echo $objinfo | awk --non-decimal-data -v now=$(date +%s) '{printf "%s%X%s%X%s\n",$1,or(("0x"$2),8),$3,now,$5}')
+
+  # update objinfo
+  $ng yamssDB2Update $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "update $TSM_SERVER_DB_NAME.spaceman_objects set objinfo=x'$newobjinfo' where nodeid=$nrid and fsid=$fsid and state=1 and extobjid=x'$extobjid'" > /dev/null
+  rc=$?
+  if [ $rc != 0 -a $rc != 227 ]; then
+    echo Error while connecting to db2 with exit code $rc
+    # remove temporary file  
+    rm -f $tmpfile
+    exit 1
+  fi
+
+fi
+
+# remove file
+$yamssRemoveWrapper "$uid" "$gid" "$fname"
+if [ $? = 0 ]; then
+  echo "File $fname removed as uid $uid and gid $gid"
+else
+  echo "Error: file $fname was not removed as uid $uid and gid $gid"
+
+  # as deletion failed restore original objinfo
+  if [ "$extobjid" != "Resident" ]; then
+    $ng yamssDB2Update $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "update $TSM_SERVER_DB_NAME.spaceman_objects set objinfo=x'$oldobjinfo' where nodeid=$nrid and fsid=$fsid and state=1 and extobjid=x'$extobjid'" > /dev/null
+    rc=$?
+    if [ $rc != 0 -a $rc != 227 ]; then
+      echo Error while connecting to db2 with exit code $rc
+      echo "DB2 inconsistency! Cannot restore objinfo $oldobjinfo for file $fname with extobjid $extobjid"
+    fi
+  fi
+fi
+
+# remove temporary file  
+rm -f $tmpfile
+
