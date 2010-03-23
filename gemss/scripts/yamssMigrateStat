@@ -30,7 +30,7 @@ if [ "$stop"x = "x" ]; then
 fi
 
 lockfile $SYSTEM_DIRECTORY_PATH/YAMSS_LOCK/premigrate.write_stat
-cat $STATDIR/premigrate | awk -v start=$start -v stop=$stop '($3>start&&$3<stop) {print $0}' > $TMPDIR/premigrate
+cat $STATDIR/premigrate | awk -v start=$start -v stop=$stop '($3>start&&$3<stop&&NF==11) {print $0}' > $TMPDIR/premigrate
 rm -f $SYSTEM_DIRECTORY_PATH/YAMSS_LOCK/premigrate.write_stat
 
 let i=$(cat $TMPDIR/premigrate|wc -l)
