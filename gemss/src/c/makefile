@@ -53,6 +53,7 @@ clean:
 
 install:
 	mkdir -p /usr/local/yamss/bin
+	mkdir -p /usr/local/yamss/lib
 	mkdir -p /usr/local/yamss/preload/${MYPRBIN}
 	mkdir -p /usr/local/yamss/preload/${MYPRLIB}
 	cp -a yamssRecallWrapper /usr/local/yamss/preload/${MYPRBIN}
