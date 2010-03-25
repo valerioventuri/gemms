@@ -8,6 +8,7 @@ if [ "$is_x86_64"x != "x" ]; then
   mv /tmp/ymake src/c/makefile
   sed -e 's/^MYPRBIN=.*/MYPRBIN=bin64/g' -e 's/^MYPRLIB=.*/MYPRLIB=lib64/g' -e 's/^MYPR=.*/MYPR=64/g' rpm/makerpm.sh > /tmp/ymake
   mv /tmp/ymake rpm/makerpm.sh
+  chmod +x rpm/makerpm.sh
   make clean
 else
   echo Architecture is not x86_64
@@ -15,5 +16,7 @@ else
   mv /tmp/ymake src/c/makefile
   sed -e 's/^MYPRBIN=.*/MYPRBIN=bin/g' -e 's/^MYPRLIB=.*/MYPRLIB=lib/g' -e 's/^MYPR=.*/MYPR=32/g' rpm/makerpm.sh > /tmp/ymake
   mv /tmp/ymake rpm/makerpm.sh
+  chmod +x rpm/makerpm.sh
   make clean
 fi
+
