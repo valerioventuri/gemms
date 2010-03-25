@@ -9,7 +9,7 @@ version=$(basename $(readlink -f ../) | cut -d"-" -f2)
 
 # prepare build yamss hsm package
 cat yamss.spec.template.hsm > /tmp/yamss.spec.hsm
-ls /etc/profile.d/yamss.* /usr/local/yamss/bin/* /usr/local/yamss/lib/* /etc/init.d/yamssmonitor /var/mmfs/etc/hsmControl /var/mmfs/etc/hsmCommands /var/mmfs/etc/startpolicy >> /tmp/yamss.spec.hsm
+ls /etc/profile.d/yamss.* /usr/local/yamss/bin/* /usr/local/yamss/lib/* /etc/init.d/yamssmonitor /var/mmfs/etc/hsmControl /var/mmfs/etc/hsmCommands /var/mmfs/etc/startpolicy | egrep -v "/usr/local/yamss/bin/yamssMigrateStat$|/usr/local/yamss/bin/yamssRecallStat$|/usr/local/yamss/bin/yamssLogger$|/var/mmfs/etc/hsmCommands$|/var/mmfs/etc/startpolicy$" >> /tmp/yamss.spec.hsm
 sed -e "s/^Version:.*/Version: $version/g" /tmp/yamss.spec.hsm > yamss.spec.hsm
 
 # prepare build yamss server package
