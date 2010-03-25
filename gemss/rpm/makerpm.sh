@@ -4,6 +4,7 @@ MYPRBIN=bin
 MYPRLIB=lib
 MYPR=32
 
+
 pkg=$(basename $(readlink -f ../) | cut -d"-" -f1)
 version=$(basename $(readlink -f ../) | cut -d"-" -f2)
 
