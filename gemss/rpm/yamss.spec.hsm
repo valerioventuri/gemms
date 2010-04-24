@@ -1,20 +1,13 @@
 Summary: INFN GEMSS
 Name: gemss-hsm
-Version: 1.1.29
+Version: 1.1.37
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 License: GPL
 Group: CNAF
-Requires: gpfs.base >= 3.2.1-14 jdk >= 2000:1.5 TIVsm-HSM >= 6.1.0-2
+Requires: gpfs.base >= 3.2.1-14 jdk >= 2000:1.5 TIVsm-HSM >= 6.1.0-2 gemss-server >= 1.1.34-1
 %description
 GEMSS stands for Grid-EnabledMass Storage System, and implements an interface between StoRM, GPFS and TSM.
-%prep
-%setup -q
-%build
-./configure
-make
-%install
-make install
 %pre
 if pidof -x yamssMonitor > /dev/null; then
   echo Stopping GEMSS services...
@@ -42,25 +35,23 @@ fi
 /usr/local/yamss/bin/yamssEnqueueRecall
 /usr/local/yamss/bin/yamssEnqueueRecallSingle
 /usr/local/yamss/bin/yamssForceScan
+/usr/local/yamss/bin/yamssGetDmAttr
 /usr/local/yamss/bin/yamssGetStatus
 /usr/local/yamss/bin/yamssGetTapeName
 /usr/local/yamss/bin/yamssListRecalls
 /usr/local/yamss/bin/yamssListTapeContent
-/usr/local/yamss/bin/yamssLogger
 /usr/local/yamss/bin/yamssLs
-/usr/local/yamss/bin/yamssMigrateStat
 /usr/local/yamss/bin/yamssMonitor
 /usr/local/yamss/bin/yamssProcessRecall
 /usr/local/yamss/bin/yamssProcessRemove
 /usr/local/yamss/bin/yamssProcessStubbify
 /usr/local/yamss/bin/yamssRecall
-/usr/local/yamss/bin/yamssRecallStat
 /usr/local/yamss/bin/yamssRecallWrapper
 /usr/local/yamss/bin/yamssRemoveSingle
 /usr/local/yamss/bin/yamssRemoveWrapper
 /usr/local/yamss/bin/yamssReorderRecall
 /usr/local/yamss/bin/yamssRm
-/usr/local/yamss/bin/yamssSelectVolumesInErrorState
+/usr/local/yamss/bin/yamssSetDmAttr
 /usr/local/yamss/bin/yamssSigTermUnblock
 /usr/local/yamss/bin/yamssStubbify
 /usr/local/yamss/bin/yamssStubbifySingle
@@ -74,6 +65,5 @@ fi
 /usr/local/yamss/lib/yamssDB2Query.class
 /usr/local/yamss/lib/yamssDB2Update.class
 /usr/local/yamss/lib/yamssPreloadOpen.so
-/var/mmfs/etc/hsmCommands
+/usr/local/yamss/lib/yamssPreloadStat.so
 /var/mmfs/etc/hsmControl
-/var/mmfs/etc/startpolicy

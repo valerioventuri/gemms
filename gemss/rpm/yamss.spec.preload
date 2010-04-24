@@ -1,6 +1,6 @@
 Summary: INFN GEMSS
-Name: gemss-preload32
-Version: 1.1.29
+Name: gemss-preload64
+Version: 1.1.37
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 License: GPL
@@ -9,13 +9,6 @@ BuildArch: noarch
 Requires: gpfs.base >= 3.2.1-14
 %description
 GEMSS stands for Grid-EnabledMass Storage System, and implements an interface between StoRM, GPFS and TSM.
-%prep
-%setup -q
-%build
-./configure
-make
-%install
-make install
 %files
-/usr/local/yamss/preload/bin/yamssRecallWrapper
-/usr/local/yamss/preload/lib/yamssPreloadOpen.so
+/usr/local/yamss/preload/bin64/yamssRecallWrapper
+/usr/local/yamss/preload/lib64/yamssPreloadOpen.so

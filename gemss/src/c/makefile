@@ -2,6 +2,12 @@ MYLFOPTS=-D_LARGE_FILE_SOURCE -D_FILE_OFFSET_BITS=64
 MYPRBIN=bin
 MYPRLIB=lib
 
+ifeq ($(shell uname -m), x86_64)
+  MYLFOPTS=
+  MYPRBIN=bin64
+  MYPRLIB=lib64
+endif
+
 MYCCOPTS=-O2 -Wall
 
 all: yamssPreloadStat.so yamssPreloadOpen.so yamssRecallWrapper yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr
