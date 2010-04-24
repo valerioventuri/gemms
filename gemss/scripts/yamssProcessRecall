@@ -174,14 +174,44 @@ if [ "$recfile"x != "0x" ]; then
 
   # start tape ordered recall
   startrectime=$(date +%s)
-  $yamssWatchdog -t $RECALL_PROCESS_TIMEOUT $dsmrecall -t -filelist=filelist.ordered.collection
-  # check whether the process was terminated by a signal
-  signum=$?
-  if [ $signum -gt 128 ]; then
-    let signum=$signum-128
-    echo Recall process was killed by signal $signum
-  fi
+  glbvar=$(mktemp /tmp/glbvar.XXXXXXXX)
+  $yamssWatchdog -t $RECALL_PROCESS_TIMEOUT $dsmrecall -d -t -filelist=filelist.ordered.collection | while read -r myline; do
+     # try to catch dsmrecall output to trace real time what it is doing
+     let i=0
+     for file in $(); do
+        let i=$i+1
+        # catch file name on the line
+        if echo $myline | egrep " $file | $file$" >/dev/null 2>&1; then
+          # catch if it was succesful
+          if echo $myline | grep "Normal File" 2>/dev/null | grep "Sent" >/dev/null 2>&1; then
+             # log success to sensor file
+             echo REC OK $(date +%s) $file $(hostname) >> $STATDIR/sensor_recall
+             echo arrayDone[$i]=\"success\" >> $glbvar
+             break
+           else
+             # log fail to sensor file
+             echo REC ERR $(date +%s) $file $(hostname) >> $STATDIR/sensor_recall
+             echo arrayDone[$i]=\"failure\" >> $glbvar
+             break
+           fi
+        fi
+     done
+  done
+
   stoprectime=$(date +%s)
+
+  . $glbvar
+  rm -f $glbvar
+
+  # log to sensor file any remaining file which might have been lost during processing
+  let i=0
+  for file in $(); do
+    let i=$i+1
+    if [ ${arrayDone[$i]}"x" != "successx" -a ${arrayDone[$i]}"x" != "failurex" ]; then
+       echo REC ERR $(date +%s) $file $(hostname) >> $STATDIR/sensor_recall
+    fi
+  done
+
 
   cd - > /dev/null
   rm -rf $tmpdir

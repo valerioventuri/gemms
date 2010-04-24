@@ -16,7 +16,7 @@ yamssPreloadOpen.so: yamssPreloadOpen.c
 	gcc -fPIC ${MYCCOPTS} ${MYLFOPTS} --shared -Wl,-soname,yamssPreloadOpen.so -ldl yamssPreloadOpen.c -o yamssPreloadOpen.so
 
 yamssPreloadStat.so: yamssPreloadStat.c
-	gcc -fPIC ${MYCCOPTS} --shared -Wl,-soname,yamssPreloadStat.so -ldl yamssPreloadStat.c -o yamssPreloadStat.so
+	gcc -m32 -fPIC ${MYCCOPTS} --shared -Wl,-soname,yamssPreloadStat.so -ldl yamssPreloadStat.c -o yamssPreloadStat.so
 
 yamssRecallWrapper: yamssRecallWrapper.c
 	gcc ${MYCCOPTS} yamssRecallWrapper.c -o yamssRecallWrapper
