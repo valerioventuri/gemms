@@ -197,7 +197,7 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
           # catch file name on the line
           if echo $myline | egrep "^$file | $file | $file$" >/dev/null 2>&1; then
             # catch if it was succesful
-            if echo $myline | egrep "^Normal File " 2>/dev/null | egrep " \[Sent\]$" >/dev/null 2>&1; then
+            if echo $myline | egrep "^Normal File" 2>/dev/null | egrep "\[Sent\]$" >/dev/null 2>&1; then
                # log success to sensor file
                echo PRE OK $(date +%s) $file $(hostname) >> $STATDIR/sensor_premigrate
                echo arrayDone[$i]=\"success\" >> $glbvar
