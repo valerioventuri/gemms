@@ -10,6 +10,11 @@ LOGGER_BLACKLIST[5]="Client date/time"
 LOGGER_BLACKLIST[6]="Copyright by IBM Corporation"
 LOGGER_BLACKLIST[7]="missing nls msg"
 LOGGER_BLACKLIST[8]="from LD_PRELOAD cannot be preloaded"
+LOGGER_BLACKLIST[9]="Session established with server"
+LOGGER_BLACKLIST[10]="Server Version"
+LOGGER_BLACKLIST[11]="Server date/time"
+LOGGER_BLACKLIST[12]="\[Done\]"
+LOGGER_BLACKLIST[13]="\[Sent\]"
 
 . /var/mmfs/etc/hsmCommands
 
