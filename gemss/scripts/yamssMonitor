@@ -80,6 +80,14 @@ while [ 1 ]; do
         $yamssUpdateVolumesInErrorState $devname 2>&1 | $yamssLogger $devname yamssUpdateVolumesInErrorState monitor.log &
      fi
 
+     # start yamssStatManager for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof -x yamssStatManage); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssStatManager $devname 2>&1 | $yamssLogger $devname yamssStatManager monitor.log &
+     fi
 
      # Check if drain file is present
      if check_drain_file $mntpoint/system/YAMSS_DRAIN/recall.drain; then

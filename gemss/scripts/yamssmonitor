@@ -61,11 +61,11 @@ start() {
 stop() {
         echo -n "Stopping $prog..."
         killproc $prog
-        
         RETVAL=$?
         [ -f /var/lock/subsys/$prog ] && rm -f /var/lock/subsys/$prog
         echo
 	$prefix/$prog2 ng-stop
+        sleep 6
         return $RETVAL  
 }
 

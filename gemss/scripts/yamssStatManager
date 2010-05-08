@@ -1,0 +1,60 @@
+#!/bin/bash
+
+echo $$
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
+
+if [ ! -f $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+
+. $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig
+
+let ld=$(date +%s)
+
+while [ 1 ]; do
+
+  let nd=$(date +%s)-$ld
+
+  if [ $nd -lt 60 ]; then
+    # Check if parent yamssMonitor is still running
+    pid=$($pidof -x yamssMonitor | awk '{print $1}')
+    nrun=0
+    for pids in $($pidof -x yamssMonitor); do
+      if [ "$pids" = "$PPID" ]; then
+        nrun=1
+      fi
+    done
+    if [ "$nrun"x = "0x" ]; then
+      echo exiting due to yamssMonitor shutdown
+      exit 0
+    fi
+    sleep 5
+    continue
+  fi
+
+  let td=$ld+60
+
+  $yamssDriveStat $device $ld $td | while read -r myline; do
+     mtype=$(echo $myline | awk '{print $1}')
+     if [ "$mtype"x = "MOUNT"x ]; then
+        echo $myline >> $STATDIR/mount
+     elif [ "$mtype"x = "DISMOUNT"x ]; then
+        echo $myline >> $STATDIR/dismount
+     fi
+  done
+
+  ld=$td
+
+  sleep 1
+
+done
+
