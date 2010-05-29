@@ -117,10 +117,6 @@ export hostnam=$(hostname|cut -d. -f1)
            printf "used(TiB) available(TiB)\n %s %s\n" $total_used $total_available | column -t
            echo
 
-           echo Current GPFS storage pools status
-           $mmdf $device
-           echo
-
            echo Current configuration
            echo
            cat $mountpoint/system/YAMSS_CONFIG/hsmConfig
