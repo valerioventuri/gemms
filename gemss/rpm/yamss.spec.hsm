@@ -1,6 +1,6 @@
 Summary: INFN GEMSS
 Name: gemss-hsm
-Version: 1.1.37
+Version: 1.2.1
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 License: GPL
@@ -32,6 +32,7 @@ fi
 /usr/local/yamss/bin/yamssDirectoryNotify
 /usr/local/yamss/bin/yamssDrainMigrations
 /usr/local/yamss/bin/yamssDrainRecalls
+/usr/local/yamss/bin/yamssDriveStat
 /usr/local/yamss/bin/yamssEnqueueRecall
 /usr/local/yamss/bin/yamssEnqueueRecallSingle
 /usr/local/yamss/bin/yamssForceScan
@@ -46,13 +47,13 @@ fi
 /usr/local/yamss/bin/yamssProcessRemove
 /usr/local/yamss/bin/yamssProcessStubbify
 /usr/local/yamss/bin/yamssRecall
-/usr/local/yamss/bin/yamssRecallWrapper
 /usr/local/yamss/bin/yamssRemoveSingle
 /usr/local/yamss/bin/yamssRemoveWrapper
 /usr/local/yamss/bin/yamssReorderRecall
 /usr/local/yamss/bin/yamssRm
 /usr/local/yamss/bin/yamssSetDmAttr
 /usr/local/yamss/bin/yamssSigTermUnblock
+/usr/local/yamss/bin/yamssStatManager
 /usr/local/yamss/bin/yamssStubbify
 /usr/local/yamss/bin/yamssStubbifySingle
 /usr/local/yamss/bin/yamssUndrainMigrations
@@ -64,6 +65,5 @@ fi
 /usr/local/yamss/lib/nailgun-0.7.1.jar
 /usr/local/yamss/lib/yamssDB2Query.class
 /usr/local/yamss/lib/yamssDB2Update.class
-/usr/local/yamss/lib/yamssPreloadOpen.so
 /usr/local/yamss/lib/yamssPreloadStat.so
 /var/mmfs/etc/hsmControl
