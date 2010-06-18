@@ -289,7 +289,7 @@ if [ "$recfile"x != "0x" ]; then
        if [ "$RECALL_USE_STORM"x = "1x" ]; then
           for taskid in $($attr -q -g TSMRecT $file 2>/dev/null | tr "," " "); do 
              echo "Setting status=success for file $file and taskid $taskid"
-             curl -# -H "Content-Type:text/plain" -X PUT -d "status=0" http://$STORM_BACKEND_NODE:9998/recalltable/task/$taskid 2>/dev/null
+             curl -s -S -H "Content-Type:text/plain" -X PUT -d "status=0" http://$STORM_BACKEND_NODE:9998/recalltable/task/$taskid 2>/dev/null
           done
 
           # remove extended attribute with taskids
@@ -339,7 +339,7 @@ if [ "$recfile"x != "0x" ]; then
           if [ "$RECALL_USE_STORM"x = "1x" ]; then
              for taskid in $($attr -q -g TSMRecT $file 2>/dev/null | tr "," " "); do 
                 echo "Setting status=failure for file $file and taskid $taskid"
-                curl -# -H "Content-Type:text/plain" -X PUT -d "status=3" http://$STORM_BACKEND_NODE:9998/recalltable/task/$taskid 2>/dev/null
+                curl -s -S -H "Content-Type:text/plain" -X PUT -d "status=3" http://$STORM_BACKEND_NODE:9998/recalltable/task/$taskid 2>/dev/null
              done
 
              # remove extended attribute with taskids
