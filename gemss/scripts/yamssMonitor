@@ -58,6 +58,15 @@ while [ 1 ]; do
         printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log 
      fi 
 
+     # start yamssRecallDaemon process for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof yamssRecallDaemon); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssRecallDaemon -v $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log &
+     fi
+
      # start yamssProcessRemove process for this filesystem if not yet running
      let nrun=0
      for pids in $($pidof -x yamssProcessRemove); do

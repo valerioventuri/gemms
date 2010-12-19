@@ -62,18 +62,21 @@ int Verbose;
 dm_sessid_t sid = DM_NO_SESSION;
 unsigned int child_proc_count = 0;
 
-void setup_dmapi(dm_sessid_t *);
-void find_session(dm_sessid_t *);
+void setup_dmapi();
+void find_session();
 
-void token_recovery(dm_sessid_t);
+void token_recovery(int);
 
-void event_loop(dm_sessid_t);
-void set_events(dm_sessid_t, void *, size_t);
-void spawn_child(dm_sessid_t, dm_token_t, void*, size_t, char *);
+void event_loop();
+void set_events();
+void register_mount();
+void spawn_child(dm_token_t, void*, size_t, char *);
 void exit_program(int);
 void usage(char *);
 void setup_signals();
 void child_handler(int);
+
+void finalize_init();
 
 int filesystem_is_mounted(void);
 
@@ -89,8 +92,13 @@ void *fs_hanp;
 size_t fs_hlen;
 char *fsname;
 
+int global_state;
+
 int main(int argc, char **argv) {	
   int c;
+
+  // print out pid (for logger)
+  printf("%d\n",getpid());
 
   Progname  = argv[0];
   fsname  = NULL;
@@ -116,6 +124,9 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  // reset global state
+  global_state=1;
+
   printf("Starting up yamssRecallDaemon\n");
 
   // setup various signal handlers
@@ -124,30 +135,60 @@ int main(int argc, char **argv) {
   
   // initialize dmap
   printf("Initializing DMAPI\n");
-  setup_dmapi(&sid);
+  setup_dmapi();
 
-  // get filesystem handle	
+  // setup event disposition for mount
+  printf("Setting disposition for MOUNT events\n");
+  register_mount();
+
+  // recover existing tokens for mount events
+  printf("Recovering existing tokens for MOUNT events\n");
+  token_recovery(DM_EVENT_MOUNT);
+
+  // check if filesystem is mounted
+  if(!filesystem_is_mounted()) {
+    fprintf(stderr,"Filesystem %s does not appear as mounted\n",fsname);
+  }
+
+  // try to finalize inizialization
+  finalize_init();
+
+  // start main loop
+  printf("Starting main event loop\n");
+  event_loop();
+  return(0);
+}
+
+// finalize initialization
+void finalize_init() {
+
+  // if filesystem is not mounted go ahead
+  if(!filesystem_is_mounted()) return;
+
+  // get filesystem handle
   if (dm_path_to_fshandle(fsname, &fs_hanp, &fs_hlen) == -1) {
     fprintf(stderr, "dm_path_to_fshandle, %d/%s\n", errno, strerror(errno));
     exit(1);
   }
 
   // setup event disposition for read, write and truncate events
-  printf("Setting disposition for MOUNT, READ, WRITE and TRUNCATE DMAPI events\n");
-  set_events(sid, fs_hanp, fs_hlen);
+  printf("Setting disposition for READ, WRITE and TRUNCATE DMAPI events\n");
+  set_events(fs_hanp, fs_hlen);
 
   // recover existing tokens (if any)
-  printf("Recovering existing tokens (if any)\n");
-  token_recovery(sid);
+  printf("Recovering existing tokens for MOUNT, READ, WRITE and TRUNCATE events\n");
+  token_recovery(DM_EVENT_MOUNT);
+  token_recovery(DM_EVENT_READ);
+  token_recovery(DM_EVENT_WRITE);
+  token_recovery(DM_EVENT_TRUNCATE);
 
-  // initialization finished, start main event loop
-  printf("Initialization finished\nStarting main event loop\n");
-  event_loop(sid);
-  return(0);
+  global_state=0;
+
+  printf("Initialization finished\n");
 }
 
 // main event loop
-void event_loop(dm_sessid_t sid) {
+void event_loop() {
   void *msgbuf;
   size_t bufsize, rlen;
   int error;
@@ -184,8 +225,11 @@ void event_loop(dm_sessid_t sid) {
       }
     }
 
+    // if initialization is not finished, try to finalize
+    if(global_state) finalize_init();
+
     // check if filesystem is mounted, otherwise exit
-    if(!filesystem_is_mounted()) exit_program(0);
+    if(!global_state&&!filesystem_is_mounted()) exit_program(0);
 
     // get all available event messages
     usleep(10000);
@@ -222,16 +266,16 @@ void event_loop(dm_sessid_t sid) {
      
       switch (msg->ev_type) {
          case DM_EVENT_MOUNT:
-           spawn_child(sid, msg->ev_token, hanp, hlen, "MOUNT");
+           spawn_child(msg->ev_token, hanp, hlen, "MOUNT");
            break;
          case DM_EVENT_READ:
-           spawn_child(sid, msg->ev_token, hanp, hlen, "READ");
+           spawn_child(msg->ev_token, hanp, hlen, "READ");
            break;
          case DM_EVENT_WRITE:
-           spawn_child(sid, msg->ev_token, hanp, hlen, "WRITE");
+           spawn_child(msg->ev_token, hanp, hlen, "WRITE");
            break;
          case DM_EVENT_TRUNCATE:
-           spawn_child(sid, msg->ev_token, hanp, hlen, "TRUNC");
+           spawn_child(msg->ev_token, hanp, hlen, "TRUNC");
            break;
          default:
            fprintf(stderr,"Invalid msg type %d\n", msg->ev_type);
@@ -248,7 +292,7 @@ out:
 }
 
 // for a child and manage the supplied event
-void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, char *action) {
+void spawn_child(dm_token_t token, void *hanp, size_t hlen, char *action) {
   pid_t mypid;
   pid_t pid;
   char sidbuf[32];
@@ -526,7 +570,7 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
 }
 
 // token recovery
-void token_recovery(dm_sessid_t sid) {
+void token_recovery(int event_rec) {
   int           error = 0;
   u_int         nbytes, ntokens = 0, ret_ntokens, i;
   dm_token_t    *tokenbuf = NULL, *tokenptr;
@@ -589,19 +633,24 @@ void token_recovery(dm_sessid_t sid) {
       hanp = DM_GET_VALUE(msgev, de_handle, void *);
       hlen = DM_GET_LEN(msgev, de_handle);
 
-      switch (msg->ev_type) {
+      if(event_rec==msg->ev_type) {
+        switch (msg->ev_type) {
+           case DM_EVENT_MOUNT:
+           spawn_child(msg->ev_token, hanp, hlen, "MOUNT");
+           break;
          case DM_EVENT_READ:
-           spawn_child(sid, msg->ev_token, hanp, hlen, "READ");
+           spawn_child(msg->ev_token, hanp, hlen, "READ");
            break;
          case DM_EVENT_WRITE:
-           spawn_child(sid, msg->ev_token, hanp, hlen, "WRITE");
+           spawn_child(msg->ev_token, hanp, hlen, "WRITE");
            break;
          case DM_EVENT_TRUNCATE:
-           spawn_child(sid, msg->ev_token, hanp, hlen, "TRUNC");
+           spawn_child(msg->ev_token, hanp, hlen, "TRUNC");
            break;
          default:
            fprintf(stderr,"Invalid msg type %d\n", msg->ev_type);
            break;
+        }
       }
       // go to next event
       msg = DM_STEP_TO_NEXT(msg, dm_eventmsg_t *);
@@ -615,8 +664,8 @@ void token_recovery(dm_sessid_t sid) {
 
 }
 
-// Set the event disposition 
-void set_events(dm_sessid_t sid, void *fs_hanp, size_t fs_hlen) {
+// Register for mount event
+void register_mount() {
   dm_eventset_t eventlist;
 
   DMEV_ZERO(eventlist);
@@ -627,6 +676,11 @@ void set_events(dm_sessid_t sid, void *fs_hanp, size_t fs_hlen) {
     exit(1);
   }
   printf("Registered for MOUNT\n");
+}
+
+// Set the event disposition 
+void set_events() {
+  dm_eventset_t eventlist;
 
   DMEV_ZERO(eventlist);
   DMEV_SET(DM_EVENT_READ, eventlist);
@@ -677,7 +731,7 @@ void block_signals(pid_t mypid) {
 
 }
 
-void setup_dmapi(dm_sessid_t  *sidp) {
+void setup_dmapi() {
   char *cp;
 
   if (dm_init_service(&cp) == -1)  {
@@ -689,7 +743,7 @@ void setup_dmapi(dm_sessid_t  *sidp) {
     exit(1);
   }
 
-  find_session(sidp);
+  find_session();
 }
 
 static int session_compare(const void *a, const void *b) {
@@ -697,7 +751,7 @@ static int session_compare(const void *a, const void *b) {
 }
 
 // try to assume or create session
-void find_session(dm_sessid_t *session) {
+void find_session() {
   char buffer[DM_SESSION_INFO_LEN];
   dm_sessid_t *sidbuf;
   dm_sessid_t new_session;
@@ -744,8 +798,8 @@ start_seek:
     // session exists
     if(Verbose)
       fprintf(stderr, "Session %s alredy existing, try to assume it\n",DMAPI_SESSION_NAME);
-    *session = (dm_sessid_t)sidbuf[i];
-    if (dm_create_session(*session, DMAPI_SESSION_NAME, &new_session) != 0) {
+    sid = (dm_sessid_t)sidbuf[i];
+    if (dm_create_session(sid, DMAPI_SESSION_NAME, &new_session) != 0) {
       if(errno==EEXIST) {
         if(Verbose)
           fprintf(stderr, "Session %s cannot be assumed, sleep %d seconds and retry\n",DMAPI_SESSION_NAME,DMAPI_YAMSS_SLEEP_TIME);
@@ -808,11 +862,11 @@ start_seek:
     free(sidbuf);
     exit(1);
   }
-  *session = (dm_sessid_t)sidbuf[i];
+  sid = (dm_sessid_t)sidbuf[i];
   free(sidbuf);
 
   // if the session is not our one, destroy it
-  if (*session != new_session) {
+  if (sid != new_session) {
     printf("Duplicate %s session found, destroying our one, sleep %d seconds and retry\n",DMAPI_SESSION_NAME,DMAPI_YAMSS_SLEEP_TIME);
     if (dm_destroy_session(new_session)) {
       fprintf(stderr, "dm_destroy_session failed, %s\n", strerror(errno));
@@ -836,10 +890,13 @@ int filesystem_is_mounted() {
     ent = getmntent(mnttab);
   }
   fclose(mnttab);
-  if(!ent) {
+  if(!global_state&&!ent) {
     fprintf(stderr,"Filesystem %s does not appear as mounted\n",fsname);
-    return 0;
   }
+
+  if(!ent) return 0;
+
+  if(global_state) printf("Filesystem %s is mounted\n",fsname);
 
   return 1;
 }

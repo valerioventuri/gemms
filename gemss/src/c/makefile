@@ -38,7 +38,7 @@ yamssSetDmAttr: yamssSetDmAttr.c
 	gcc ${MYCCOPTS} yamssSetDmAttr.c -ldmapi -o yamssSetDmAttr
 
 yamssRecallDaemon: yamssRecallDaemon.c
-	gcc -O2 -Wall -ldmapi yamssRecallDaemon.c -o yamssRecallDaemon -lgpfs
+	gcc ${MYCCOPTS} -ldmapi yamssRecallDaemon.c -o yamssRecallDaemon -lgpfs
 
 clean:
 	rm -f yamssPreloadStat.so yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
