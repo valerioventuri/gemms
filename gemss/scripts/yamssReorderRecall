@@ -117,7 +117,6 @@ for filewrapper in $(ls $DMRECALLDIR); do
     rc=$?
     echo $extbojid $mntpoint $inodenum $fname $rc
     if [ $rc = 0 -a "$fname"x != "x" ]; then
-      echo $mntpoint$fname $(date +%s) 0 >> $tmprecq
       echo "Enqueued dmapi recall for file $fname"
       rm -f $DMRECALLDIR/$filewrapper
     fi

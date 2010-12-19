@@ -194,13 +194,13 @@ if [ "$recfile"x != "0x" ]; then
      # try to catch dsmrecall output to trace real time what it is doing
      let i=0
      # print line to stdout
-     echo $myline
+     echo "$myline"
      for file in $(cat ./$(basename $recfile) | awk '{print $4}'); do
         let i=$i+1
         # catch file name on the line
-        if echo $myline | egrep "^$file | $file | $file$" >/dev/null 2>&1; then
+        if echo "$myline" | egrep "^$file | $file | $file$" >/dev/null 2>&1; then
           # catch if it was succesful
-          if echo $myline | egrep "^Recalling" 2>/dev/null | egrep "\[Done\]$" >/dev/null 2>&1; then
+          if echo "$myline" | egrep "^Recalling" 2>/dev/null | egrep "\[Done\]$" >/dev/null 2>&1; then
              # log success to sensor file
              echo REC OK $(date +%s) $file $(hostname) >> $STATDIR/sensor_recall
              echo arrayDone[$i]=\"success\" >> $glbvar
