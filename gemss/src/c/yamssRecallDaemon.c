@@ -24,7 +24,6 @@
 #include <fcntl.h>
 #include <string.h>
 #include <signal.h>
-
 #include <stdarg.h>
 
 #include <dmapi.h>
