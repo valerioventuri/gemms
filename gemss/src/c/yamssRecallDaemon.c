@@ -42,6 +42,9 @@
 #include <gpfs.h>
 #include <sys/stat.h>
 
+// Maximum number of recalls that can be served simultaneously
+#define MAXIMUM_ALLOWED_CHILDREN 1000
+
 #define HANDLE_LEN 64
 #define ALL_AVAIL_MSGS  0
 #define DMAPI_SESSION_NAME "yamRecD"
@@ -96,6 +99,10 @@ int global_state;
 
 int main(int argc, char **argv) {	
   int c;
+
+  // disable buffering for stdout and stderr streams
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
 
   // print out pid (for logger)
   printf("%d\n",getpid());
@@ -199,6 +206,8 @@ void event_loop() {
   size_t           hlen;
   dm_data_event_t *msgev;
 
+  int first_time=1;
+
   // define inizial message buffer size
   bufsize = sizeof(dm_eventmsg_t) + sizeof(dm_data_event_t) + HANDLE_LEN;
   bufsize *= 16;
@@ -231,8 +240,22 @@ void event_loop() {
     // check if filesystem is mounted, otherwise exit
     if(!global_state&&!filesystem_is_mounted()) exit_program(0);
 
-    // get all available event messages
+    // sleep 10 ms
     usleep(10000);
+
+    // check if maximum number of children has been reached
+    if(child_proc_count>=MAXIMUM_ALLOWED_CHILDREN) {
+      if(first_time) printf("Maximum number of children reached %d/%d\n",child_proc_count,MAXIMUM_ALLOWED_CHILDREN);
+      first_time=0;
+      continue;
+    }
+
+    if(!first_time) {
+      printf("Number of children back to normality %d/%d\n",child_proc_count,MAXIMUM_ALLOWED_CHILDREN);
+      first_time=1;
+    }
+
+    // get all available event messages with unblocking call
     error = dm_get_events(sid, ALL_AVAIL_MSGS, 0, bufsize, msgbuf, &rlen);
     if (error == -1) {
       if (errno == E2BIG) {
