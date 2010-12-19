@@ -47,6 +47,8 @@
 #define DMAPI_SESSION_NAME "yamRecD"
 #define DMAPI_YAMSS_SLEEP_TIME 5
 
+#define EXTOBJID_LEN 56
+
 // sleep time betwenn checks of recall status (in seconds) 
 #define RECALL_CHECK_SLEEP_TIME 5
 // timeout for giving up a recall with an error status (in seconds)
@@ -314,7 +316,7 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
 
     // get dmapi extended attribute with tsm external object id
     memset((void *)&attrname.an_chars[0], 0, DM_ATTR_NAME_SIZE);
-    memcpy((void *)&attrname.an_chars[0], "IBMPMig", 7);
+    memcpy((void *)&attrname.an_chars[0], "IBMObj", 6);
     ret = dm_get_dmattr(sid, hanp, hlen, DM_NO_TOKEN, &attrname, sizeof(bufp), bufp, &rlenp);
     if(ret==-1) {
       fprintf(stderr,"%d: dm_get_dmattr: failed, %s\n", mypid, strerror(errno));
@@ -377,7 +379,7 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
     }
 
     printf("%d: serving %s event for file on mount point %s with inode number %llu and external object id ", mypid, action, ent->mnt_dir, inop);
-    for(i=0;i<rlenp;i++) {
+    for(i=0;i<EXTOBJID_LEN;i++) {
       c=((unsigned char*)bufp)[i];
       sprintf(extobj+i*2,"%02X",c);
     }
@@ -449,7 +451,7 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
 
       // check if IBMObj is there
       memset((void *)&attrname.an_chars[0], 0, DM_ATTR_NAME_SIZE);
-      memcpy((void *)&attrname.an_chars[0], "IBMObj", 6);
+      memcpy((void *)&attrname.an_chars[0], "IBMPMig", 7);
       ret = dm_get_dmattr(sid, hanp, hlen, DM_NO_TOKEN, &attrname, sizeof(bufp), bufp, &rlenp);
       if(ret==-1&&errno!=ENOENT) {
         // if filesystem is not mounted don't reply with error

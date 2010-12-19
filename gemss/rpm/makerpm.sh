@@ -14,17 +14,6 @@
 #   limitations under the License.
 ############################################################################
 
-MYPRBIN=bin
-MYPRLIB=lib
-MYPR=32
-
-if [ $(uname -m) = "x86_64" ]; then
-  MYPRBIN=bin64
-  MYPRLIB=lib64
-  MYPR=64
-fi
-
-
 . ../version 
 
 # prepare build yamss hsm package

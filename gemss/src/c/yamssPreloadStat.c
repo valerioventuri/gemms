@@ -32,7 +32,7 @@
 #include <dlfcn.h>
 #undef __USE_GNU
 
-/* Hook: preload of these functions allows to bypass dsmmigrate check of st_blocks and restore IBMObj DMAPI EA */
+/* Hook: preload of these functions allows to bypass dsmmigrate check of st_blocks (most probably is no longer necessary with TIV HSM 6.1.4) */
 
 int (*__real_lxstat__)(int ver, const char *path, struct stat *buf)=NULL;
 int (*__real_lxstat64__)(int ver, const char *path, struct stat64 *buf)=NULL;
