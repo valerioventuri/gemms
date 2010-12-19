@@ -90,6 +90,9 @@ fi
 # Create temporary file
 tmprecq=$(mktemp /tmp/tsmrecq.XXXXXXX)
 
+# cleanup old DMAPI recall error files
+$yamssCleanupDMErrorDirectory $device
+
 # Get files from dmapi recalls
 for filewrapper in $(ls $DMRECALLDIR); do
   # check if first character is not a /, the entry can be either an absolute path or a TSM extended object ID

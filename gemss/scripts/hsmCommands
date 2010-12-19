@@ -33,6 +33,7 @@ yamssUpdateDamagedFiles=/usr/local/yamss/bin/yamssUpdateDamagedFiles
 yamssUpdateVolumesInErrorState=/usr/local/yamss/bin/yamssUpdateVolumesInErrorState
 yamssStatManager=/usr/local/yamss/bin/yamssStatManager
 yamssDriveStat=/usr/local/yamss/bin/yamssDriveStat
+yamssCleanupDMErrorDirectory=/usr/local/yamss/bin/yamssCleanupDMErrorDirectory
 javadb2="java -client -cp /usr/local/yamss/lib/db2jcc.jar:/usr/local/yamss/lib"
 ngserver="java -cp /usr/local/yamss/lib/nailgun-0.7.1.jar:/usr/local/yamss/lib/db2jcc.jar:/usr/local/yamss/lib -server com.martiansoftware.nailgun.NGServer 127.0.0.1"
 ng=/usr/local/yamss/bin/ng

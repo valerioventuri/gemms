@@ -1,0 +1,46 @@
+#!/bin/bash
+############################################################################
+# Copyright 2008-2010 Istituto Nazionale di Fisica Nucleare
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+############################################################################
+
+. /var/mmfs/etc/hsmCommands
+
+device=$1
+     
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  exit 1
+fi
+  
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+DMERRORDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DMERROR
+
+now=$(date +%s)
+let past=$now-$RECALL_DMAPI_ERROR_CLEANUP
+
+ls -l --time-style=+%s $DMERRORDIR | egrep -v "^total" | while read -r myline; do
+  mtime=$(echo $myline | awk '{print $6}')
+  fname=$(echo $myline | awk '{print $7}')
+  if [ $mtime -le $past ]; then
+    echo Removing old DMAPI recall error file $DMERRORDIR/$fname
+    rm -f $DMERRORDIR/$fname
+  fi
+done
+
