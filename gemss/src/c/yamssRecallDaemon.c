@@ -262,8 +262,8 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
   dm_ino_t inop;
   char s[512];
   char hname[512];
-  char *yamssPreloadPath="/system/YAMSS_PRELOAD";
-  char *yamssDMAPIPath="/system/YAMSS_DMAPI";
+  char *yamssRecallPath="/system/YAMSS_DMRECALL";
+  char *yamssDMAPIPath="/system/YAMSS_DMERROR";
   int fd;
   int i;
   int ret;
@@ -392,7 +392,7 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
     }
 
     // generate temporary file with unique name containing the external object id of the file to be recalled
-    sprintf(s,"%s%s/%s.%d.XXXXXXXX",ent->mnt_dir,yamssPreloadPath,hname,mypid);
+    sprintf(s,"%s%s/%s.%d.XXXXXXXX",ent->mnt_dir,yamssRecallPath,hname,mypid);
     if((fd=mkstemp(s))<0) {
       fprintf(stderr,"%d: cannot generate temporary file %s\n",mypid, s);
       // if filesystem is not mounted don't reply with error
@@ -485,7 +485,7 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
       sleep(RECALL_CHECK_SLEEP_TIME);
 
       // check if an error flag file has been raised
-      sprintf(s,"%s%s/%s.failed",ent->mnt_dir,yamssDMAPIPath,inode);
+      sprintf(s,"%s%s/%s",ent->mnt_dir,yamssDMAPIPath,inode);
       if(!stat(s, &filebuf) && filebuf.st_ctime>rectime) {
         fprintf(stderr,"%d: error flag found - cannot recall inode %s on disk\n", mypid, inode);
         // respond EIO in this case to differentiate with EBUSY generic errors

@@ -37,6 +37,7 @@ LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
 RECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_RECALL
 STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
 DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
+DMERRORDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DMERROR
 
 check_drain_file() {
    if [ -f $1 ]; then  
@@ -345,8 +346,13 @@ if [ "$recfile"x != "0x" ]; then
           echo "Recall of $file enqueued for retry $n (max $RECALL_MAX_RETRY)"
        else
           # recall failed, set extended attribute with the exact time of failure
-          fdate=$(date +%s)
-          $attr -q -s TSMErrD -V $fdate $file 
+          inode=$(ls -i $file | awk '{print $1}') 
+          if [ "$inode"x != "x" ]; then
+            # create error condition file
+            touch $DMERRORDIR/$inode
+          else
+            echo Cannot determine inode number for file $file
+          fi
           echo Recall of file $file failed
 
           # update recall table if StoRM is used. Warning: error conditions are not handled. If restful service is unavailable recall table is silently not updated. To be fixed

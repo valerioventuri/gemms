@@ -28,7 +28,7 @@
 
 int main(int argc,char **argv) {
 
-  char *yamssPreloadPath="/system/YAMSS_PRELOAD";
+  char *yamssRecallPath="/system/YAMSS_DMRECALL";
 
   char s[4096];
   char hname[4096];
@@ -128,7 +128,7 @@ int main(int argc,char **argv) {
     }
 
     /* generate temporary file with unique name containing the file to be recalled */
-    sprintf(s,"%s%s/%s.%d.XXXXXXXX",ent->mnt_dir,yamssPreloadPath,hname,getpid());
+    sprintf(s,"%s%s/%s.%d.XXXXXXXX",ent->mnt_dir,yamssRecallPath,hname,getpid());
     if((fd=mkstemp(s))<0) {
       fprintf(stderr,"yamssRecall: Error: cannot generate temporary file %s for file %s. Cannot recall it\n",s,rpath);
       rc=1;

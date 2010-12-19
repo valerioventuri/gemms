@@ -1,27 +1,11 @@
 MYLFOPTS=-D_LARGE_FILE_SOURCE -D_FILE_OFFSET_BITS=64
-MYPRBIN=bin
-MYPRLIB=lib
-
-ifeq ($(shell uname -m), x86_64)
-  MYLFOPTS=
-  MYPRBIN=bin64
-  MYPRLIB=lib64
-endif
 
 MYCCOPTS=-O2 -Wall
 
-all: yamssPreloadStat.so yamssPreloadOpen.so yamssRecallWrapper yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
-
-yamssPreloadOpen.so: yamssPreloadOpen.c
-	gcc -fPIC ${MYCCOPTS} ${MYLFOPTS} --shared -Wl,-soname,yamssPreloadOpen.so -ldl yamssPreloadOpen.c -o yamssPreloadOpen.so
+all: yamssPreloadStat.so yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
 
 yamssPreloadStat.so: yamssPreloadStat.c
 	gcc -m32 -fPIC ${MYCCOPTS} --shared -Wl,-soname,yamssPreloadStat.so -ldl yamssPreloadStat.c -o yamssPreloadStat.so
-
-yamssRecallWrapper: yamssRecallWrapper.c
-	gcc ${MYCCOPTS} yamssRecallWrapper.c -o yamssRecallWrapper
-	chown nobody:nobody yamssRecallWrapper
-	chmod +s yamssRecallWrapper
 
 yamssRecall: yamssRecall.c
 	gcc ${MYCCOPTS} yamssRecall.c -o yamssRecall
@@ -57,14 +41,10 @@ yamssRecallDaemon: yamssRecallDaemon.c
 	gcc -O2 -Wall -ldmapi yamssRecallDaemon.c -o yamssRecallDaemon -lgpfs
 
 clean:
-	rm -f yamssPreloadStat.so yamssPreloadOpen.so yamssRecallWrapper yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
+	rm -f yamssPreloadStat.so yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
 
 install:
 	mkdir -p /usr/local/yamss/bin	
 	mkdir -p /usr/local/yamss/lib
-	mkdir -p /usr/local/yamss/preload/${MYPRBIN}
-	mkdir -p /usr/local/yamss/preload/${MYPRLIB}
-	cp -a yamssRecallWrapper /usr/local/yamss/preload/${MYPRBIN}
 	cp -a yamssRecall yamssRm yamssStubbify yamssRemoveWrapper yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon /usr/local/yamss/bin
-	cp -a yamssPreloadOpen.so /usr/local/yamss/preload/${MYPRLIB}
 	cp -a yamssPreloadStat.so /usr/local/yamss/lib

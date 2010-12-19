@@ -29,7 +29,7 @@ fi
 
 # prepare build yamss hsm package
 cat yamss.spec.template.hsm > /tmp/yamss.spec.hsm
-ls /etc/profile.d/yamss.* /usr/local/yamss/bin/* /usr/local/yamss/lib/* /etc/init.d/yamssmonitor /var/mmfs/etc/hsmControl /var/mmfs/etc/hsmCommands /var/mmfs/etc/startpolicy | egrep -v "/usr/local/yamss/bin/yamssMigrateStat$|/usr/local/yamss/bin/yamssRecallStat$|/usr/local/yamss/bin/yamssLogger$|/var/mmfs/etc/hsmCommands$|/var/mmfs/etc/startpolicy$|/usr/local/yamss/bin/yamssRecallDaemon" >> /tmp/yamss.spec.hsm
+ls /etc/profile.d/yamss.* /usr/local/yamss/bin/* /usr/local/yamss/lib/* /etc/init.d/yamssmonitor /var/mmfs/etc/hsmControl /var/mmfs/etc/hsmCommands /var/mmfs/etc/startpolicy | egrep -v "/usr/local/yamss/bin/yamssMigrateStat$|/usr/local/yamss/bin/yamssRecallStat$|/usr/local/yamss/bin/yamssLogger$|/var/mmfs/etc/hsmCommands$|/var/mmfs/etc/startpolicy$" >> /tmp/yamss.spec.hsm
 sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g"  /tmp/yamss.spec.hsm > yamss.spec.hsm
 
 # prepare build yamss server package
@@ -42,14 +42,8 @@ cat yamss.spec.template.client > /tmp/yamss.spec.client
 ls /etc/profile.d/yamss.* /usr/local/yamss/bin/yamssLs /usr/local/yamss/bin/yamssRm /usr/local/yamss/bin/yamssStubbify /usr/local/yamss/bin/yamssRecall /var/mmfs/etc/hsmCommands >> /tmp/yamss.spec.client
 sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g" /tmp/yamss.spec.client > yamss.spec.client
 
-# prepare build yamss preload package
-cat yamss.spec.template.preload > /tmp/yamss.spec.preload
-ls /usr/local/yamss/preload/$MYPRBIN/yamssRecallWrapper /usr/local/yamss/preload/$MYPRLIB/yamssPreloadOpen.so >> /tmp/yamss.spec.preload
-sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g" -e "s/Name:.*/Name: gemss-preload$MYPR/g" /tmp/yamss.spec.preload > yamss.spec.preload
-
 # build all
 rpmbuild -bb yamss.spec.hsm
 rpmbuild -bb yamss.spec.server
 rpmbuild -bb yamss.spec.client
-rpmbuild -bb yamss.spec.preload
 

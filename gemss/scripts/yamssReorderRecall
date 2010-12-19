@@ -35,7 +35,7 @@ fi
 
 LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
 RECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_RECALL
-PRELOADDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_PRELOAD
+DMRECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DMRECALL
 STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
 DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
 
@@ -57,9 +57,9 @@ fi
 # Locally queued files
 let numlrec=$(cat $RECALLDIR/recall.queue 2>/dev/null| wc -l)
 
-# File queued with preload library
-let numpreload=$(ls $PRELOADDIR | wc -l)
-let numlrec=$numlrec+$numpreload
+# File queued via dmapi
+let numdmapi=$(ls $DMRECALLDIR | wc -l)
+let numlrec=$numlrec+$numdmapi
 
 # Files queued in StoRM
 if [ "$RECALL_USE_STORM"x = "1x" ]; then
@@ -90,13 +90,37 @@ fi
 # Create temporary file
 tmprecq=$(mktemp /tmp/tsmrecq.XXXXXXX)
 
-# Get files from preload recalls
-for filewrapper in $(ls $PRELOADDIR); do
-  # insert task into local recall queue
-  filep=$(cat $PRELOADDIR/$filewrapper)
-  if [ "$filep"x != "x" ]; then
-    echo $filep $(date +%s) 0 >> $tmprecq
-    rm -f $PRELOADDIR/$filewrapper
+# Get files from dmapi recalls
+for filewrapper in $(ls $DMRECALLDIR); do
+  # check if first character is not a /, the entry can be either an absolute path or a TSM extended object ID
+  firstc=$(cat $DMRECALLDIR/$filewrapper | head -n1 | cut -c1)
+
+  if [ "$firstc"x = "/x" ]; then
+    # it is an obsolute path
+    # insert task into local recall queue
+    filep=$(cat $DMRECALLDIR/$filewrapper)
+    if [ "$filep"x != "x" ]; then
+      echo $filep $(date +%s) 0 >> $tmprecq
+      rm -f $DMRECALLDIR/$filewrapper
+    fi
+  else
+    # this is an automatic recall via dmapi
+    filep=$(cat $DMRECALLDIR/$filewrapper)
+    extbojid=$(echo $filep | awk '{print $1}')
+    mntpoint=$(echo $filep | awk '{print $2}')
+    inodenum=$(echo $filep | awk '{print $3}')
+    # determine path querying the tsm db
+    fname=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select file_name from spacemgfiles where filespace_name='$mntpoint' and extobjid='$extbojid'")
+    rc=$?
+    echo $extbojid $mntpoint $inodenum $fname $rc
+    if [ $rc = 0 -a "$fname"x != "x" ]; then
+      echo $mntpoint$fname $(date +%s) 0 >> $tmprecq
+      echo "Enqueued dmapi recall for file $fname"
+      rm -f $DMRECALLDIR/$filewrapper
+    fi
+  fi
+  if [ -f $DMRECALLDIR/$filewrapper ]; then
+    echo "Warning! Cannot perform the recall in wrapper $DMRECALLDIR/$filewrapper"
   fi
 done
 
