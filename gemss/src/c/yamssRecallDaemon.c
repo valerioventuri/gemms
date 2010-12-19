@@ -47,7 +47,7 @@
 #define DMAPI_SESSION_NAME "yamRecD"
 #define DMAPI_YAMSS_SLEEP_TIME 5
 
-#define EXTOBJID_LEN 56
+#define EXTOBJID_LEN 28
 
 // sleep time betwenn checks of recall status (in seconds) 
 #define RECALL_CHECK_SLEEP_TIME 5
@@ -451,7 +451,7 @@ void spawn_child(dm_sessid_t sid, dm_token_t token, void *hanp, size_t hlen, cha
 
       // check if IBMObj is there
       memset((void *)&attrname.an_chars[0], 0, DM_ATTR_NAME_SIZE);
-      memcpy((void *)&attrname.an_chars[0], "IBMPMig", 7);
+      memcpy((void *)&attrname.an_chars[0], "IBMObj", 6);
       ret = dm_get_dmattr(sid, hanp, hlen, DM_NO_TOKEN, &attrname, sizeof(bufp), bufp, &rlenp);
       if(ret==-1&&errno!=ENOENT) {
         // if filesystem is not mounted don't reply with error
