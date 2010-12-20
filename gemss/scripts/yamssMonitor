@@ -48,7 +48,7 @@ while [ 1 ]; do
       let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
     done
     if [ "$nrun"x = "0x" ]; then
-      $yamssRecallDaemon -v $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
+      $yamssRecallDaemon $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
     fi
     break
 
