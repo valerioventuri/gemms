@@ -115,8 +115,8 @@ for filewrapper in $(ls $DMRECALLDIR); do
     # determine path querying the tsm db
     fname=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select file_name from spacemgfiles where filespace_name='$mntpoint' and extobjid='$extbojid'")
     rc=$?
-    echo $extbojid $mntpoint $inodenum $fname $rc
     if [ $rc = 0 -a "$fname"x != "x" ]; then
+      echo $mntpoint$fname $(date +%s) 0 >> $tmprecq
       echo "Enqueued dmapi recall for file $fname"
       rm -f $DMRECALLDIR/$filewrapper
     fi
