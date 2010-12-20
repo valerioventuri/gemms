@@ -629,8 +629,6 @@ void token_recovery(int event_rec) {
 
   tokenptr = tokenbuf;
   for (i = 0; i < ret_ntokens; i++) {
-    if (Verbose)
-      fprintf(stderr,"Recovering outstanding event for token %llu %llu\n",tokenptr->high,tokenptr->low);
 
     do {
       char *tmpbuf;
@@ -656,6 +654,9 @@ void token_recovery(int event_rec) {
       hlen = DM_GET_LEN(msgev, de_handle);
 
       if(event_rec==msg->ev_type) {
+        if (Verbose)
+          fprintf(stderr,"Recovering outstanding event for token %llu %llu\n",tokenptr->high,tokenptr->low);
+
         switch (msg->ev_type) {
            case DM_EVENT_MOUNT:
            spawn_child(msg->ev_token, hanp, hlen, "MOUNT");
