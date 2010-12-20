@@ -35,8 +35,11 @@ LOGGER_BLACKLIST[13]="\[Sent\]"
 device=$1
 program=$2
 logfile=$3
-     
-mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+mountpoint=$4
+
+if [ "$mountpoint"x = "x" ]; then    
+  mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+fi
 
 SYSTEM_DIRECTORY_PATH=$mountpoint/system
 

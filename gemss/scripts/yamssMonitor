@@ -30,6 +30,30 @@ let hbnum=1
 
 while [ 1 ]; do
 
+  # get existing filesystems from /etc/fstab
+  cat /etc/fstab | while read -r myline; do
+    dev=$(echo "$myline" | awk '{print $1}')
+    devf=$(echo "$dev" | cut -c1)
+    mntpoint=$(echo "$myline" | awk '{print $2}')
+    fstype=$(echo "$myline" | awk '{print $3}')
+    if [ "$devf"x = "#"x -o "$fstype"x != "gpfs"x ]; then
+      continue
+    fi
+    devname=$(echo $dev|cut -d/ -f3)
+    
+    # yamssRecallDaemon must start before the filesystem is mounted
+    # note that for the moment the recall daemon will start only for the first gpfs filesystem in fstav
+    let nrun=0
+    for pids in $($pidof yamssRecallDaemon); do
+      let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
+    done
+    if [ "$nrun"x = "0x" ]; then
+      $yamssRecallDaemon -v $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
+    fi
+    break
+
+  done
+
   # loop over all mounted filesystems
   while read -r myline; do
      devname=$(basename $(echo "$myline"|awk '{print $1}'))
@@ -46,9 +70,17 @@ while [ 1 ]; do
        continue
      fi
 
-     # startup
+     # give startup message (if filesystem is mounted)
      if [ $firstrun = "1" ]; then
         printf "$$\nProcess has started\n" | $yamssLogger $devname yamssMonitor monitor.log
+     fi
+
+     # start nailgun, but log just on the first filesystem log file (should fix it for multiple filesystems)
+     let nrun=0
+     for pids in $($pidof java); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n2 | head -n1 | egrep "com.martiansoftware.nailgun.NGServer" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
         MYPID=$$
         (echo $MYPID; $ngserver) | $yamssLogger $devname yamssMonitor monitor.log &
      fi 
@@ -57,15 +89,6 @@ while [ 1 ]; do
      if [ $hbnum -eq 50 ]; then
         printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log 
      fi 
-
-     # start yamssRecallDaemon process for this filesystem if not yet running
-     let nrun=0
-     for pids in $($pidof yamssRecallDaemon); do
-        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
-     done
-     if [ "$nrun"x = "0x" ]; then
-        $yamssRecallDaemon -v $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log &
-     fi
 
      # start yamssProcessRemove process for this filesystem if not yet running
      let nrun=0
