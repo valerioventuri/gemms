@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
   }
 
   // reset global state
-  global_state=1;
+  global_state=0;
 
   printf("Starting up yamssRecallDaemon\n");
 
@@ -151,11 +151,6 @@ int main(int argc, char **argv) {
   printf("Recovering existing tokens for MOUNT events\n");
   token_recovery(DM_EVENT_MOUNT);
 
-  // check if filesystem is mounted
-  if(!filesystem_is_mounted()) {
-    fprintf(stderr,"Filesystem %s does not appear as mounted\n",fsname);
-  }
-
   // try to finalize inizialization
   finalize_init();
 
@@ -169,7 +164,13 @@ int main(int argc, char **argv) {
 void finalize_init() {
 
   // if filesystem is not mounted go ahead
-  if(!filesystem_is_mounted()) return;
+  if(!filesystem_is_mounted()) {
+    if(global_state==0) {
+      printf("File system is not mounted, final step of initialization is delayed\n");
+      global_state=1;
+    }
+    return;
+  }
 
   // get filesystem handle
   if (dm_path_to_fshandle(fsname, &fs_hanp, &fs_hlen) == -1) {
@@ -188,7 +189,7 @@ void finalize_init() {
   token_recovery(DM_EVENT_WRITE);
   token_recovery(DM_EVENT_TRUNCATE);
 
-  global_state=0;
+  global_state=2;
 
   printf("Initialization finished\n");
 }
@@ -234,10 +235,10 @@ void event_loop() {
     }
 
     // if initialization is not finished, try to finalize
-    if(global_state) finalize_init();
+    if(global_state==1) finalize_init();
 
     // check if filesystem is mounted, otherwise exit
-    if(!global_state&&!filesystem_is_mounted()) exit_program(0);
+    if(global_state==2&&!filesystem_is_mounted()) exit_program(0);
 
     // sleep 10 ms
     usleep(10000);
@@ -913,13 +914,11 @@ int filesystem_is_mounted() {
     ent = getmntent(mnttab);
   }
   fclose(mnttab);
-  if(!global_state&&!ent) {
+  if(global_state==2&&!ent) {
     fprintf(stderr,"Filesystem %s does not appear as mounted\n",fsname);
   }
 
   if(!ent) return 0;
-
-  if(global_state) printf("Filesystem %s is mounted\n",fsname);
 
   return 1;
 }
