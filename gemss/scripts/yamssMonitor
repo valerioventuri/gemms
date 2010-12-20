@@ -56,7 +56,7 @@ while [ 1 ]; do
 
   # loop over all mounted filesystems
   while read -r myline; do
-     devname=$(basename $(echo "$myline"|awk '{print $1}'))
+     devname=$(basename -- $(echo "$myline"|awk '{print $1}'))
      mntpoint=$(echo "$myline"|awk '{print $2}')
      fstype=$(echo "$myline"|awk '{print $3}')
 
