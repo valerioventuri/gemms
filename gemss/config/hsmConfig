@@ -1,0 +1,117 @@
+# storm node serving the file system (if any)
+STORM_BACKEND_NODE="storm-fe-virgo-01"
+
+# migrate node list (comma separated)
+MIGRATE_NODE_LIST="tsm-hsm-12,tsm-hsm-13"
+
+# filesystem scan minimum frequency (in sec)
+MIGRATE_SCAN_FREQUENCY=1800
+
+# maximum number of running migrate threads per node
+MIGRATE_RUNNING_THREADS=2
+
+# maximum number of files for each migrate thread
+MIGRATE_FILES_PER_THREAD=200
+
+# automigration flag (set to 1 if StoRM is not used to flag candidates for migration)
+MIGRATE_AUTO=1
+
+# maximum retention on disk when automigration is off after which file is automigrated (in sec)
+MIGRATE_MAX_RETENTION=259200
+
+# timeout for migrate command (in secs)
+MIGRATE_PROCESS_TIMEOUT=7200
+
+# garbage collection low threshold (in %)
+GARBAGE_COLLECTOR_LOW_THRESHOLD=85
+
+# garbage collection high threshold (in %)
+GARBAGE_COLLECTOR_HIGH_THRESHOLD=90
+
+# recall node list (comma separated). Warning: must contain the owner node of the filesystem
+RECALL_NODE_LIST="tsm-hsm-12,tsm-hsm-13"
+
+# flag to turn on the StoRM recall interface (set to 0 if StoRM is not used)
+RECALL_USE_STORM=0
+
+# maximum number of files taken over from the StoRM recall table in one step
+RECALL_STORM_DEQUEUE_MAX=500
+
+# maximum number of files to dequeue from the local recall queue in one step
+RECALL_LOCAL_DEQUEUE_MAX=500
+
+# timeout for reorder recall command (in secs)
+RECALL_REORDER_TIMEOUT=600
+
+# timeout for process recall command (in secs)
+RECALL_PROCESS_TIMEOUT=7200
+
+# maximum number of running recall threads per node
+RECALL_RUNNING_THREADS=2
+
+# number of retrials for each file recall (set zero for no retrials)
+RECALL_MAX_RETRY=2
+
+# threshold for giving high priority to recall of one tape (in sec)
+RECALL_MAX_RETENTION=1800
+
+# implicit pin time interval for transparent recalls (in sec)
+RECALL_IMPLICIT_PINTIME=172800
+
+# period of time after which dmapi recall error file are cleaned up (in sec)
+RECALL_DMAPI_ERROR_CLEANUP=259200
+
+# activate optional module: asyncronous remove
+MODULE_REMOVE=no
+
+# activate optional module: asyncronous stubbify
+MODULE_STUBBIFY=yes
+
+# activate optional module: restore status of damaged files
+MODULE_UPDATE_DAMAGED_FILES=yes
+
+# activate optional module: restore status of volumes
+MODULE_UPDATE_VOLUMES_IN_ERROR_STATE=yes
+
+# activate optional module: update logs with various statistics
+MODULE_STAT_MANAGER=yes
+
+# maximum number of read/write errors before considering a tape defunct
+READWRITE_MAX_ERRORS=5
+
+# maximum size of the log files (in MB) after which they are rotated
+LOG_FILE_MAX_SIZE=100
+
+# maximum number of previous (gzipped) log files to retain
+LOG_FILE_MAX_RETENTION=10
+
+# TSM dsmadmc user name
+TSM_ID="admin"
+
+# TSM dsmadmc user password
+TSM_PASSWORD="admin"
+
+# TSM server name
+TSM_SERVER="tsm-server-4"
+
+# TSM server user name
+TSM_SERVER_ID="admin"
+
+# TSM server user passwd
+TSM_SERVER_PASSWORD="admin"
+
+# TSM server db2 port number
+TSM_SERVER_DB_PORT=3700
+
+# TSM server db2 DB name
+TSM_SERVER_DB_NAME="tsmdb1"
+
+# TSM proxy asnode name
+TSM_PROXY_NODE="PROXY_NODE_TEST"
+
+# report period (in sec)
+REPORT_FREQUENCY=86400
+
+# report email addresses (comma separated)
+REPORT_EMAIL_ADDRESS_LIST="Vladimir.Sapunenko@cnaf.infn.it,Daniele.Gregori@cnaf.infn.it,Luca.dellAgnello@cnaf.infn.it,Vincenzo.Vagnoni@bo.infn.it,PierPaolo.Ricci@cnaf.infn.it,Stefano.DalPra@cnaf.infn.it"
+
