@@ -385,7 +385,7 @@ void spawn_child(dm_token_t token, void *hanp, size_t hlen, char *action) {
     memset((void *)&attrname.an_chars[0], 0, DM_ATTR_NAME_SIZE);
     memcpy((void *)&attrname.an_chars[0], "IBMObj", 6);
     ret = dm_get_dmattr(sid, hanp, hlen, DM_NO_TOKEN, &attrname, sizeof(bufp), bufp, &rlenp);
-    if(ret==-1) {
+    if(ret==-1&&errno!=ENOENT) {
       fprintf(stderr,"%d: dm_get_dmattr: failed, %s\n", mypid, strerror(errno));
       // if filesystem is not mounted don't reply with error
       // it might be a normal mmshutdown and event will be taken over
@@ -394,7 +394,39 @@ void spawn_child(dm_token_t token, void *hanp, size_t hlen, char *action) {
         fprintf(stderr, "%d: dm_respond_event failed, %d/%s\n", mypid, errno, strerror(errno));
       }
       exit(1);
+    } else if(ret==-1) {
+      // get file attributes structure
+      ret=dm_get_fileattr(sid,hanp,hlen,DM_NO_TOKEN,DM_AT_STAT,&statp);
+      if(ret==-1) {
+        fprintf(stderr,"%d: dm_get_fileattr: failed, %s\n", mypid, strerror(errno));
+        // if filesystem is not mounted don't reply with error
+        // it might be a normal mmshutdown and event will be taken over
+        if(!filesystem_is_mounted()) exit(1);
+        if (dm_respond_event(sid, token, DM_RESP_ABORT, EBUSY, 0, NULL)) {
+          fprintf(stderr, "%d: dm_respond_event failed, %d/%s\n", mypid, errno, strerror(errno));
+        }
+        exit(1);
+      }
+
+      // IBMObj is not there, double-check if number of blocks on disk is OK
+      if(statp.dt_blocks>=(statp.dt_size/statp.dt_blksize)) {
+        // File has been recalled
+        if (dm_respond_event(sid, token, DM_RESP_CONTINUE, 0, 0, NULL)) {
+          fprintf(stderr, "%d: dm_respond_event failed, %d/%s\n", mypid, errno, strerror(errno));
+          // if filesystem is not mounted don't reply with error
+          // it might be a normal mmshutdown and event will be taken over
+          if(!filesystem_is_mounted()) exit(1);
+          if (dm_respond_event(sid, token, DM_RESP_ABORT, EBUSY, 0, NULL)) {
+            fprintf(stderr, "%d: dm_respond_event failed, %d/%s\n", mypid, errno, strerror(errno));
+          }
+          exit(1);
+        }
+        printf("%d: %s event for inode %llu on mount point %s served correctly\n", mypid, action, inop, fsname);
+        exit(0);
+      }
+
     }
+
 
     // get file inode number
     ret = dm_handle_to_ino(hanp, hlen, &inop);
@@ -535,7 +567,7 @@ void spawn_child(dm_token_t token, void *hanp, size_t hlen, char *action) {
         }
       }
 
-      // check if number of blocks on disk are OK and if IBMObj has been removed
+      // check if number of blocks on disk is OK and if IBMObj has been removed
       if(statp.dt_blocks>=(statp.dt_size/statp.dt_blksize)&&ret==-1&&errno==ENOENT) {
         // File has been recalled
         if (dm_respond_event(sid, token, DM_RESP_CONTINUE, 0, 0, NULL)) {
