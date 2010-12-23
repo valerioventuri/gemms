@@ -16,7 +16,7 @@
 
 . /var/mmfs/etc/hsmCommands
 
-if [ "$1"x != "-f"x ]; then
+if [ "$1"x != "-f"x -a "$2"x != "-f"x ]; then
   read -p "You are going to kill yamssRecallDaemon. Are you sure? [y/n] " ans
   if [ "$ans"x = "n"x ]; then
      echo Aborted
@@ -25,9 +25,14 @@ if [ "$1"x != "-f"x ]; then
   fi
 fi
 
+signal="SIGTERM"
+if [ "$1"x = "-k"x -o "$2"x = "-k"x ]; then
+  signal="SIGKILL"
+fi
+
 for pids in $($pidof yamssRecallDaemon); do
-  echo Sending SIGTERM to pid $pids
-  kill -TERM $pids
+  echo Sending $signal to pid $pids
+  kill -s $signal $pids
 done
 
 echo Note that process might need time to die if there are recall being served
