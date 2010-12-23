@@ -40,6 +40,7 @@ fi
 /usr/local/yamss/bin/yamssGetDmAttr
 /usr/local/yamss/bin/yamssGetStatus
 /usr/local/yamss/bin/yamssGetTapeName
+/usr/local/yamss/bin/yamssKillRecallDaemon
 /usr/local/yamss/bin/yamssListExpiredFiles
 /usr/local/yamss/bin/yamssListRecalls
 /usr/local/yamss/bin/yamssListTapeContent

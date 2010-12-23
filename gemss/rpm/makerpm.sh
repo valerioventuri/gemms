@@ -29,7 +29,7 @@ sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g
 
 # prepare build yamss client package
 cat yamss.spec.template.client > /tmp/yamss.spec.client
-ls /etc/profile.d/yamss.* /usr/local/yamss/bin/yamssLs /usr/local/yamss/bin/yamssRm /usr/local/yamss/bin/yamssStubbify /usr/local/yamss/bin/yamssRecall /var/mmfs/etc/hsmCommands >> /tmp/yamss.spec.client
+ls /etc/profile.d/yamss.* /usr/local/yamss/bin/yamssLs /usr/local/yamss/bin/yamssRm /usr/local/yamss/bin/yamssStubbify /usr/local/yamss/bin/yamssRecall /usr/local/yamss/bin/yamssGetStatus /var/mmfs/etc/hsmCommands >> /tmp/yamss.spec.client
 sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g" /tmp/yamss.spec.client > yamss.spec.client
 
 # build all
