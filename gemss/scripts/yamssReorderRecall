@@ -244,13 +244,24 @@ if [ $numrec -ne 0 ]; then
        let signum=$signum-128
        echo Recall reordering process was killed by signal $signum
      else
-       echo Recall reordering process exited with error status $signum
+       echo Recall reordering process exited with return status $signum
      fi
 
      # enqueue again files for recall
      for filefail in $(cat $tmpdir/recall.queue.proc); do
-       $yamssEnqueueRecallSingle $device $filefail 0
-       echo "Recall of $filefail enqueued again due to termination of recall reordering process"
+       # check if file is already on disk
+
+       # file size in bytes
+       filesize=$(ls -l $filefail | awk '{print $5}')
+       # blocks of file on disk
+       fileblocks=$(ls -s $filefail | awk '{print $1}')
+       # was the recall completed?
+       let ondisk=$fileblocks*1024
+       if [ $ondisk -lt $filesize ]; then
+         $yamssEnqueueRecallSingle $device $filefail 0
+         echo "Recall of $filefail enqueued again due to termination of recall reordering process"
+       fi
+
      done
 
      # clean up and exit
