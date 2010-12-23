@@ -1,6 +1,6 @@
 Summary: INFN GEMSS
 Name: gemss-client
-Version: 1.3.1
+Version: 1.3.2
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 License: GPL
@@ -11,6 +11,7 @@ GEMSS stands for Grid-EnabledMass Storage System, and implements an interface be
 %files
 /etc/profile.d/yamss.csh
 /etc/profile.d/yamss.sh
+/usr/local/yamss/bin/yamssGetStatus
 /usr/local/yamss/bin/yamssLs
 /usr/local/yamss/bin/yamssRecall
 /usr/local/yamss/bin/yamssRm

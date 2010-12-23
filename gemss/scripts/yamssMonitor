@@ -90,49 +90,59 @@ while [ 1 ]; do
         printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log 
      fi 
 
-     # start yamssProcessRemove process for this filesystem if not yet running
-     let nrun=0
-     for pids in $($pidof -x yamssProcessRemove); do
-        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
-     done
-     if [ "$nrun"x = "0x" ]; then
-        $yamssProcessRemove $devname 2>&1 | $yamssLogger $devname yamssProcessRemove monitor.log &
+     if [ "$MODULE_REMOVE"x = "yesx" ]; then 
+       # start yamssProcessRemove process for this filesystem if not yet running
+       let nrun=0
+       for pids in $($pidof -x yamssProcessRemove); do
+          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+       done
+       if [ "$nrun"x = "0x" ]; then
+          $yamssProcessRemove $devname 2>&1 | $yamssLogger $devname yamssProcessRemove monitor.log &
+       fi
      fi
 
-     # start yamssProcessStubbify process for this filesystem if not yet running
-     let nrun=0
-     for pids in $($pidof -x yamssProcessStubbify); do
-        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
-     done
-     if [ "$nrun"x = "0x" ]; then
-        $yamssProcessStubbify $devname 2>&1 | $yamssLogger $devname yamssProcessStubbify monitor.log &
+     if [ "$MODULE_STUBBIFY"x = "yesx" ]; then
+       # start yamssProcessStubbify process for this filesystem if not yet running
+       let nrun=0
+       for pids in $($pidof -x yamssProcessStubbify); do
+          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+       done
+       if [ "$nrun"x = "0x" ]; then
+          $yamssProcessStubbify $devname 2>&1 | $yamssLogger $devname yamssProcessStubbify monitor.log &
+       fi
      fi
 
-     # start yamssUpdateDamagedFiles for this filesystem if not yet running
-     let nrun=0
-     for pids in $($pidof -x yamssUpdateDamagedFiles); do
-        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
-     done
-     if [ "$nrun"x = "0x" ]; then
-        $yamssUpdateDamagedFiles $devname 2>&1 | $yamssLogger $devname yamssUpdateDamagedFiles monitor.log &
+     if [ "$MODULE_UPDATE_DAMAGED_FILES"x = "yesx" ]; then
+       # start yamssUpdateDamagedFiles for this filesystem if not yet running
+       let nrun=0
+       for pids in $($pidof -x yamssUpdateDamagedFiles); do
+         let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+       done
+       if [ "$nrun"x = "0x" ]; then
+          $yamssUpdateDamagedFiles $devname 2>&1 | $yamssLogger $devname yamssUpdateDamagedFiles monitor.log &
+       fi
      fi
 
-     # start yamssUpdateVolumesInErrorState for this filesystem if not yet running
-     let nrun=0
-     for pids in $($pidof -x yamssUpdateVolumesInErrorState); do
-        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
-     done
-     if [ "$nrun"x = "0x" ]; then
-        $yamssUpdateVolumesInErrorState $devname 2>&1 | $yamssLogger $devname yamssUpdateVolumesInErrorState monitor.log &
+     if [ "$MODULE_UPDATE_VOLUMES_IN_ERROR_STATE"x = "yesx" ]; then
+       # start yamssUpdateVolumesInErrorState for this filesystem if not yet running
+       let nrun=0
+       for pids in $($pidof -x yamssUpdateVolumesInErrorState); do
+          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+       done
+       if [ "$nrun"x = "0x" ]; then
+          $yamssUpdateVolumesInErrorState $devname 2>&1 | $yamssLogger $devname yamssUpdateVolumesInErrorState monitor.log &
+       fi
      fi
 
-     # start yamssStatManager for this filesystem if not yet running
-     let nrun=0
-     for pids in $($pidof -x yamssStatManager); do
-        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
-     done
-     if [ "$nrun"x = "0x" ]; then
-        $yamssStatManager $devname 2>&1 | $yamssLogger $devname yamssStatManager monitor.log &
+     if [ "$MODULE_STAT_MANAGER"x = "yesx" ]; then
+       # start yamssStatManager for this filesystem if not yet running
+       let nrun=0
+       for pids in $($pidof -x yamssStatManager); do
+         let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+       done
+       if [ "$nrun"x = "0x" ]; then
+         $yamssStatManager $devname 2>&1 | $yamssLogger $devname yamssStatManager monitor.log &
+       fi
      fi
 
      # Check if drain file is present
