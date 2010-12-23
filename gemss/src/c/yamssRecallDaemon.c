@@ -421,7 +421,7 @@ void spawn_child(dm_token_t token, void *hanp, size_t hlen, char *action) {
           }
           exit(1);
         }
-        printf("%d: %s event for inode %llu on mount point %s served correctly\n", mypid, action, inop, fsname);
+        printf("%d: %s event for inode %llu on mount point %s served correctly (file was found to be already on disk)\n", mypid, action, inop, fsname);
         exit(0);
       }
 
