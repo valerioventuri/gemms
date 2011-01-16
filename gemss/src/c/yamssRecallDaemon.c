@@ -42,10 +42,16 @@
 #include <sys/stat.h>
 
 // Maximum number of recalls that can be served simultaneously
+// Can be exceeded by MAXIMUM_MESSAGES at maximum
 #define MAXIMUM_ALLOWED_CHILDREN 1000
 
+// Sleep time (in mus) of the main loop
+#define MAIN_LOOP_SLEEP_TIME 10000
+
+// Maximum number of messages that are fetched in one call
+#define MAXIMUM_MESSAGES 10
+
 #define HANDLE_LEN 64
-#define ALL_AVAIL_MSGS  0
 #define DMAPI_SESSION_NAME "yamRecD"
 #define DMAPI_YAMSS_SLEEP_TIME 5
 
@@ -240,8 +246,8 @@ void event_loop() {
     // check if filesystem is mounted, otherwise exit
     if(global_state==2&&!filesystem_is_mounted()) exit_program(0);
 
-    // sleep 10 ms
-    usleep(10000);
+    // sleep for MAIN_LOOP_SLEEP_TIME mus
+    usleep(MAIN_LOOP_SLEEP_TIME);
 
     // check if maximum number of children has been reached
     if(child_proc_count>=MAXIMUM_ALLOWED_CHILDREN) {
@@ -255,8 +261,8 @@ void event_loop() {
       first_time=1;
     }
 
-    // get all available event messages with unblocking call
-    error = dm_get_events(sid, ALL_AVAIL_MSGS, 0, bufsize, msgbuf, &rlen);
+    // get MAXIMUM_MESSAGES available event messages with unblocking call
+    error = dm_get_events(sid, MAXIMUM_MESSAGES, 0, bufsize, msgbuf, &rlen);
     if (error == -1) {
       if (errno == E2BIG) {
         // message buffer was too small, enlarge it
