@@ -208,8 +208,8 @@ void event_loop() {
   dm_eventmsg_t *msg;
   pid_t process_id;
 
-  void            *hanp;
-  size_t           hlen;
+  void *hanp;
+  size_t hlen;
   dm_data_event_t *msgev;
 
   int first_time=1;

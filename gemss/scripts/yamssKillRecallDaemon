@@ -20,8 +20,10 @@ if [ "$1"x != "-f"x -a "$2"x != "-f"x ]; then
   read -p "You are going to kill yamssRecallDaemon. Are you sure? [y/n] " ans
   if [ "$ans"x = "n"x ]; then
      echo Aborted
+     exit 1
   elif [ "$ans"x != "y"x ]; then
      echo "Wrong answer, nothing to do"
+     exit 1
   fi
 fi
 
