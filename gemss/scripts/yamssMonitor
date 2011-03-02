@@ -42,7 +42,7 @@ while [ 1 ]; do
     devname=$(echo $dev|cut -d/ -f3)
     
     # yamssRecallDaemon must start before the filesystem is mounted
-    # note that for the moment the recall daemon will start only for the first gpfs filesystem in fstav
+    # note that for the moment the recall daemon will start only for the first gpfs filesystem in fstab
     let nrun=0
     for pids in $($pidof yamssRecallDaemon); do
       let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
