@@ -30,6 +30,8 @@ fi
 signal="SIGTERM"
 if [ "$1"x = "-k"x -o "$2"x = "-k"x ]; then
   signal="SIGKILL"
+elif [ "$1"x = "-i"x -o "$2"x = "-i"x ]; then
+  signal="SIGINT"
 fi
 
 for pids in $($pidof yamssRecallDaemon); do
