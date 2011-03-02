@@ -178,6 +178,7 @@ export hostnam=$(hostname|cut -d. -f1)
      else
         let NEXT=$LASTSCAN+$MIGRATE_SCAN_FREQUENCY-$NOW
         echo $NEXT | awk '{mintime=$1/60; strmt=int(mintime+2); if(mintime<2) {strmt="2"}; print "Next filesystem scan expected in",strmt,"minutes"}'
+        sleep 120
      fi
      cleanupAndExit 0
 
