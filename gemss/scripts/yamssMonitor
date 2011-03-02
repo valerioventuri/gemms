@@ -36,22 +36,27 @@ while [ 1 ]; do
     devf=$(echo "$dev" | cut -c1)
     mntpoint=$(echo "$myline" | awk '{print $2}')
     fstype=$(echo "$myline" | awk '{print $3}')
+    devmm=$(ls -l "$dev" 2>/dev/null | tr "," " " | awk '{printf "%x%x\n",$5,$6}')
+
+    # line is commented
     if [ "$devf"x = "#"x -o "$fstype"x != "gpfs"x ]; then
       continue
     fi
     devname=$(echo $dev|cut -d/ -f3)
     
-    # yamssRecallDaemon must start before the filesystem is mounted
-    # note that for the moment the recall daemon will start only for the first gpfs filesystem in fstab
+    # cannot determine major and minor number for gpfs device
+    if [ "$devmm"x = "x" ]; then
+      continue
+    fi
+
+    # yamssRecallDaemon must start also before the filesystem is mounted
     let nrun=0
     for pids in $($pidof yamssRecallDaemon); do
       let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
     done
     if [ "$nrun"x = "0x" ]; then
-      $yamssRecallDaemon $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
+      $yamssRecallDaemon yam$devmm $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
     fi
-    break
-
   done
 
   # loop over all mounted filesystems
@@ -70,9 +75,17 @@ while [ 1 ]; do
        continue
      fi
 
+     # execute configuration file
+     . $mntpoint/system/YAMSS_CONFIG/hsmConfig
+
      # give startup message (if filesystem is mounted)
      if [ $firstrun = "1" ]; then
         printf "$$\nProcess has started\n" | $yamssLogger $devname yamssMonitor monitor.log
+     fi
+
+     # log heartbeat
+     if [ $hbnum -eq 50 ]; then
+        printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log
      fi
 
      # start nailgun, but log just on the first filesystem log file (should fix it for multiple filesystems)
@@ -83,11 +96,6 @@ while [ 1 ]; do
      if [ "$nrun"x = "0x" ]; then
         MYPID=$$
         (echo $MYPID; $ngserver) | $yamssLogger $devname yamssMonitor monitor.log &
-     fi 
-
-     # log heartbeat
-     if [ $hbnum -eq 50 ]; then
-        printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log 
      fi 
 
      if [ "$MODULE_REMOVE"x = "yesx" ]; then 
@@ -149,9 +157,6 @@ while [ 1 ]; do
      if check_drain_file $mntpoint/system/YAMSS_DRAIN/recall.drain; then
        continue
      fi
-
-     # execute configuration file
-     . $mntpoint/system/YAMSS_CONFIG/hsmConfig
 
      # start yamssStartPolicy process for this filesystem if not yet running
      let nrun=0

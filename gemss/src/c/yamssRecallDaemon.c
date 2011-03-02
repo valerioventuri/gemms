@@ -52,7 +52,6 @@
 #define MAXIMUM_MESSAGES 10
 
 #define HANDLE_LEN 64
-#define DMAPI_SESSION_NAME "yamRecD"
 #define DMAPI_YAMSS_SLEEP_TIME 5
 
 #define EXTOBJID_LEN 28
@@ -69,6 +68,8 @@ char *Progname;
 int Verbose;
 dm_sessid_t sid = DM_NO_SESSION;
 unsigned int child_proc_count = 0;
+
+char *DMAPI_SESSION_NAME;
 
 void setup_dmapi();
 void find_session();
@@ -93,7 +94,7 @@ void block_signals(pid_t);
 void usage(char *prog) {
   fprintf(stderr, "Usage: %s ", prog);
   fprintf(stderr, " <-v verbose> ");
-  fprintf(stderr, "filesystem \n");
+  fprintf(stderr, "dmapi_session_name filesystem \n");
 }
 
 void *fs_hanp;
@@ -126,15 +127,13 @@ int main(int argc, char **argv) {
       exit(1);
     }
   }
-  if (optind >= argc) {
+  if ((argc-optind)!=2) {
     usage(Progname);
     exit(1);
   }
+  DMAPI_SESSION_NAME = argv[optind++];
   fsname = argv[optind];
-  if (fsname == NULL) {
-    usage(Progname);
-    exit(1);
-  }
+  
 
   // reset global state
   global_state=0;
