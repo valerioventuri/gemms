@@ -22,7 +22,7 @@ export device=$arg1
 
 export mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 
 export SYSTEM_DIRECTORY_PATH=$mountpoint/system
 
@@ -171,5 +171,5 @@ export hostnam=$(hostname|cut -d. -f1)
      fi
      cleanupAndExit 0
 
-} 2>&1 | $yamssLogger $device startpolicy startpolicy.log
+}
 

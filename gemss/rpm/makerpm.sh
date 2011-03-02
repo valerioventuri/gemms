@@ -19,21 +19,15 @@
 
 # prepare build yamss hsm package
 cat yamss.spec.template.hsm > /tmp/yamss.spec.hsm
-ls /etc/profile.d/yamss.* /usr/local/yamss/bin/* /usr/local/yamss/lib/* /etc/init.d/yamssmonitor /var/mmfs/etc/hsmControl /var/mmfs/etc/hsmCommands /var/mmfs/etc/startpolicy | egrep -v "/usr/local/yamss/bin/yamssMigrateStat$|/usr/local/yamss/bin/yamssRecallStat$|/usr/local/yamss/bin/yamssLogger$|/var/mmfs/etc/hsmCommands$|/var/mmfs/etc/startpolicy$" >> /tmp/yamss.spec.hsm
+ls /etc/profile.d/yamss.* /usr/local/yamss/bin/* /usr/local/yamss/lib/* /etc/init.d/yamssmonitor >> /tmp/yamss.spec.hsm
 sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g"  /tmp/yamss.spec.hsm > yamss.spec.hsm
-
-# prepare build yamss server package
-cat yamss.spec.template.server > /tmp/yamss.spec.server
-ls /usr/local/yamss/bin/yamssMigrateStat /usr/local/yamss/bin/yamssRecallStat /usr/local/yamss/bin/yamssLogger /var/mmfs/etc/hsmCommands /var/mmfs/etc/startpolicy >> /tmp/yamss.spec.server
-sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g"  /tmp/yamss.spec.server > yamss.spec.server
 
 # prepare build yamss client package
 cat yamss.spec.template.client > /tmp/yamss.spec.client
-ls /etc/profile.d/yamss.* /usr/local/yamss/bin/yamssLs /usr/local/yamss/bin/yamssRm /usr/local/yamss/bin/yamssStubbify /usr/local/yamss/bin/yamssRecall /usr/local/yamss/bin/yamssGetStatus /var/mmfs/etc/hsmCommands >> /tmp/yamss.spec.client
+ls /etc/profile.d/yamss.* /usr/local/yamss/bin/yamssLs /usr/local/yamss/bin/yamssRm /usr/local/yamss/bin/yamssStubbify /usr/local/yamss/bin/yamssRecall /usr/local/yamss/bin/yamssGetStatus /usr/local/yamss/bin/yamssCommands >> /tmp/yamss.spec.client
 sed -e "s/^Version:.*/Version: $version/g" -e "s/^Release:.*/Release: $release/g" /tmp/yamss.spec.client > yamss.spec.client
 
 # build all
 rpmbuild -bb yamss.spec.hsm
-rpmbuild -bb yamss.spec.server
 rpmbuild -bb yamss.spec.client
 

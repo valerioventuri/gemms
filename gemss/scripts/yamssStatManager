@@ -16,7 +16,7 @@
 
 echo $$
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 
 device=$1
 

@@ -20,7 +20,7 @@ uid=$3
 gid=$4
 tmpfile=$5
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 . $mountpoint/system/YAMSS_CONFIG/hsmConfig
 
 if [ ! -f $fname ]; then

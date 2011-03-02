@@ -14,7 +14,7 @@
 #   limitations under the License.
 ############################################################################
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 
 echo
 echo "Checking GPFS-TSM-YAMSS managed filesystems mounted on this node"

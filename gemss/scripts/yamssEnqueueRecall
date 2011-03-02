@@ -14,7 +14,7 @@
 #   limitations under the License.
 ############################################################################
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 
 if [ "$1"x = "-fx" ]; then
   filelist=$2

@@ -14,7 +14,7 @@
 #   limitations under the License.
 ############################################################################
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 
 longlist=0
 if [ "$1"x = "-lx" ]; then

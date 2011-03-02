@@ -16,7 +16,7 @@
 
 source /etc/profile
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 
 check_drain_file() {
    if [ -f $1 ]; then  
@@ -164,6 +164,15 @@ while [ 1 ]; do
      done
      if [ "$isin"x = "0x" ]; then
         continue
+     fi
+
+     # start yamssStartPolicy process for this filesystem if not yet running
+     let nrun=0
+     for pids in $($pidof -x yamssStartPolicy); do
+        let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+     done
+     if [ "$nrun"x = "0x" ]; then
+        $yamssStartPolicy $devname 2>&1 | $yamssLogger $devname yamssStartPolicy startpolicy.log &
      fi
 
      # start yamssReorderRecall process for this filesystem if not yet running

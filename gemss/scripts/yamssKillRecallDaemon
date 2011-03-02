@@ -14,7 +14,7 @@
 #   limitations under the License.
 ############################################################################
 
-. /var/mmfs/etc/hsmCommands
+. /usr/local/yamss/bin/yamssCommands
 
 if [ "$1"x != "-f"x -a "$2"x != "-f"x ]; then
   read -p "You are going to kill yamssRecallDaemon. Are you sure? [y/n] " ans
