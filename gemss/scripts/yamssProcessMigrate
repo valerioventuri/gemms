@@ -111,7 +111,7 @@ fi
 
 if [ "$1" = "TEST" ]; then   
    # Should make a check of the hsm node, for the moment it does nothing
-   sleep 0
+   exit 0
 fi
 
 if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then

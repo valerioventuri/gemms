@@ -153,19 +153,6 @@ while [ 1 ]; do
      # execute configuration file
      . $mntpoint/system/YAMSS_CONFIG/hsmConfig
 
-     # check if this node is within the recall node list
-     hostnam=$(hostname|cut -d. -f1)
-     isin=0
-     for nodes in $(echo $RECALL_NODE_LIST|tr "," " "|cut -d. -f1); do
-        if [ "$hostnam"x = "$nodes"x ]; then
-           isin=1
-           break
-        fi
-     done
-     if [ "$isin"x = "0x" ]; then
-        continue
-     fi
-
      # start yamssStartPolicy process for this filesystem if not yet running
      let nrun=0
      for pids in $($pidof -x yamssStartPolicy); do
@@ -184,12 +171,25 @@ while [ 1 ]; do
         $yamssReorderRecall $devname 2>&1 | $yamssLogger $devname yamssReorderRecall monitor.log &
      fi
 
+     # check if this node is within the recall node list
+     hostnam=$(hostname|cut -d. -f1)
+     isin=0
+     for nodes in $(echo $RECALL_NODE_LIST|tr "," " "|cut -d. -f1); do
+        if [ "$hostnam"x = "$nodes"x ]; then
+           isin=1
+           break
+        fi
+     done
+     if [ "$isin"x = "0x" ]; then
+        continue
+     fi
+
      # start yamssProcessRecall processes for this filesystem if not yet running
      let nrun=0
      for pids in $($pidof -x yamssProcessRecall); do
         let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
      done
-     # note that two yamssProcessRecall processes exist for each recall
+     # note that two yamssProcessRecall processes are returned for each recall
      let nrun=$nrun/2+1
      for nlau in $(seq $nrun $RECALL_RUNNING_THREADS); do
         $yamssProcessRecall $devname 2>&1 | $yamssLogger $devname yamssProcessRecall monitor.log &
