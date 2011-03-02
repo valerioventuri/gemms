@@ -2,7 +2,7 @@ MYLFOPTS=-D_LARGE_FILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 MYCCOPTS=-O2 -Wall
 
-all: yamssPreloadStat.so yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
+all: yamssPreloadStat.so yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRemoveDmAttr yamssRecallDaemon
 
 yamssPreloadStat.so: yamssPreloadStat.c
 	gcc -m32 -fPIC ${MYCCOPTS} --shared -Wl,-soname,yamssPreloadStat.so -ldl yamssPreloadStat.c -o yamssPreloadStat.so
@@ -33,6 +33,9 @@ yamssDirectoryNotify: yamssDirectoryNotify.c
 
 yamssGetDmAttr: yamssGetDmAttr.c
 	gcc ${MYCCOPTS} yamssGetDmAttr.c -ldmapi -o yamssGetDmAttr
+
+yamssRemoveDmAttr: yamssRemoveDmAttr.c
+	gcc ${MYCCOPTS} yamssRemoveDmAttr.c -ldmapi -o yamssRemoveDmAttr
 
 yamssSetDmAttr: yamssSetDmAttr.c
 	gcc ${MYCCOPTS} yamssSetDmAttr.c -ldmapi -o yamssSetDmAttr
