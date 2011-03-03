@@ -63,7 +63,7 @@ let numlrec=$numlrec+$numdmapi
 
 # Files queued in StoRM
 if [ "$RECALL_USE_STORM"x = "1x" ]; then
-  numtakeover=$($curl -s -S -X GET http://$STORM_BACKEND_NODE:9998/recalltable/cardinality/tasks/readyTakeOver)
+  numtakeover=$($yamssWatchdog -t 60 $curl -s -S -X GET http://$STORM_BACKEND_NODE:9998/recalltable/cardinality/tasks/readyTakeOver)
   # if numtakeover is empty storm is probably offline
   if [ "$numtakeover"x = "x" ]; then
      echo "Error: StoRM recall table service not responding"
@@ -130,7 +130,7 @@ done
 if [ "$RECALL_USE_STORM"x = "1x" -a "$numtakeover"x != "0x" ]; then
 
    # takes over tasks from StoRM recall table
-   $curl -s -S -H "Content-Type:text/plain" -X PUT -d first=$RECALL_STORM_DEQUEUE_MAX http://$STORM_BACKEND_NODE:9998/recalltable/tasks 2>/dev/null | tr '#' '\n' | tr "{" " " | tr "}" " " | while read -r myline; do
+   $yamssWatchdog -t 60 $curl -s -S -H "Content-Type:text/plain" -X PUT -d first=$RECALL_STORM_DEQUEUE_MAX http://$STORM_BACKEND_NODE:9998/recalltable/tasks 2>/dev/null | tr '#' '\n' | tr "{" " " | tr "}" " " | while read -r myline; do
      taskid=$(echo "$myline"|awk '{print $1}')
      fname=$(echo "$myline"|awk '{print $5}')
      cattr=$($attr -q -g TSMRecT $fname 2>/dev/null)
