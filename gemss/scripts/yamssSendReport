@@ -56,6 +56,8 @@ let NOW=$(date +%s)
 let DELAYREP=$NOW-$LASTREPORT
 
 if [ $DELAYREP -gt $REPORT_FREQUENCY ]; then
+  echo "Sending periodic report to $REPORT_EMAIL_ADDRESS_LIST"
+
   echo $NOW > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport
   {
     echo -e "subject: GPFS+TSM report"
@@ -124,7 +126,6 @@ if [ $DELAYREP -gt $REPORT_FREQUENCY ]; then
      echo GPFS policy
      echo
      $mmlspolicy $device -L 
-  }
-# | sendmail -f $device@cnaf.infn.it $REPORT_EMAIL_ADDRESS_LIST
+  } | sendmail -f $device@cnaf.infn.it $REPORT_EMAIL_ADDRESS_LIST
 fi
 
