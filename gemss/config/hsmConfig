@@ -1,5 +1,6 @@
 # storm node serving the file system (if any)
-STORM_BACKEND_NODE="storm-fe-virgo-01"
+#STORM_BACKEND_NODE="storm-fe-virgo-01"
+#Virgo disattivato almeno inizialmente
 
 # migrate node list (comma separated)
 MIGRATE_NODE_LIST="tsm-hsm-12,tsm-hsm-13"
@@ -76,6 +77,15 @@ MODULE_UPDATE_VOLUMES_IN_ERROR_STATE=yes
 # activate optional module: update logs with various statistics
 MODULE_STAT_MANAGER=yes
 
+# activate optional module: send periodic report via email
+MODULE_SEND_REPORT=yes
+
+# report period (in sec)
+REPORT_FREQUENCY=86400
+
+# report email addresses (comma separated)
+REPORT_EMAIL_ADDRESS_LIST="Vladimir.Sapunenko@cnaf.infn.it,Daniele.Gregori@cnaf.infn.it,Luca.dellAgnello@cnaf.infn.it,Vincenzo.Vagnoni@bo.infn.it,PierPaolo.Ricci@cnaf.infn.it,Stefano.DalPra@cnaf.infn.it"
+
 # maximum number of read/write errors before considering a tape defunct
 READWRITE_MAX_ERRORS=5
 
@@ -108,10 +118,4 @@ TSM_SERVER_DB_NAME="tsmdb1"
 
 # TSM proxy asnode name
 TSM_PROXY_NODE="PROXY_NODE_TEST"
-
-# report period (in sec)
-REPORT_FREQUENCY=86400
-
-# report email addresses (comma separated)
-REPORT_EMAIL_ADDRESS_LIST="Vladimir.Sapunenko@cnaf.infn.it,Daniele.Gregori@cnaf.infn.it,Luca.dellAgnello@cnaf.infn.it,Vincenzo.Vagnoni@bo.infn.it,PierPaolo.Ricci@cnaf.infn.it,Stefano.DalPra@cnaf.infn.it"
 
