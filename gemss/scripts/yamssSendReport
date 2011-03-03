@@ -14,6 +14,9 @@
 #   limitations under the License.
 ############################################################################
 
+# print PID for logger
+echo $$
+
 # Include global declarations and service routines.
 . /usr/lpp/mmfs/bin/mmglobfuncs
 . /usr/lpp/mmfs/bin/mmsdrfsdef
