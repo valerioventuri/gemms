@@ -2,11 +2,13 @@
 
 echo CREAZIONE DEI FILE DA preMIGRARE
 
-BASEPATH1="/gpfs/gemss_test/test/"
-BASEPATH2="/gpfs/gemss_test2/test/"
+BASEPATH1=$(cat testsuite.conf|egrep -v '^#'|egrep '^' BASEPATH1|sed -e 's/^.*=//')
 
-NFILE=10;
-OFFSET=100;
+BASEPATH2=$(cat testsuite.conf|egrep -v '^#'|egrep '^' BASEPATH2|sed -e 's/^.*=//')
+
+NFILE=$(cat testsuite.conf|egrep -v '^#'|egrep '^' NFILE|sed -e 's/^.*=//')
+
+OFFSET=$(cat testsuite.conf|egrep -v '^#'|egrep '^' OFFSET|sed -e 's/^.*=//')
 
 for i in `seq $NFILE` 
 do 
