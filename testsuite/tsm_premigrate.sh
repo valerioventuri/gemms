@@ -27,6 +27,9 @@ echo ATTESA DI 5 minuti CHE IL FILE INVECCHI poi si migrano;
 sleep 300
 date
 echo "LANCIO dsmmigrate"
+echo CONTROLLARE I LOG IN /gpfs/gemss_test/system/YAMSS_LOG/startpolicy.log
+echo E IN /gpfs/gemss_test2/system/YAMSS_LOG/startpolicy.log
+
 ssh tsm-hsm-13 "dsmmigrate -p /gpfs/gemss_test/test/data1/greg*"
 
 ssh tsm-hsm-12 "dsmmigrate -p /gpfs/gemss_test/test/data2/greg*"
@@ -35,6 +38,4 @@ ssh tsm-hsm-13 "dsmmigrate -p /gpfs/gemss_test2/test/data3/greg*"
 
 ssh tsm-hsm-12 "dsmmigrate -p /gpfs/gemss_test2/test/data4/greg*"
 
-date
-echo CONTROLLARE I LOG IN /gpfs/gemss_test/system/YAMSS_LOG/startpolicy.log
-echo E IN /gpfs/gemss_test2/system/YAMSS_LOG/startpolicy.log
+echo FINE.
