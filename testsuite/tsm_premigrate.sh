@@ -10,16 +10,18 @@ NFILE=$(cat testsuite.conf|egrep -v '^#'|egrep '^' NFILE|sed -e 's/^.*=//')
 
 OFFSET=$(cat testsuite.conf|egrep -v '^#'|egrep '^' OFFSET|sed -e 's/^.*=//')
 
+MODULO=$(cat testsuite.conf|egrep -v '^#'|egrep '^' MODULO|sed -e 's/^.*=//')
+
 for i in `seq $NFILE` 
 do 
 
-    cnt=`echo $(($RANDOM %1000 + $OFFSET))` 
+    cnt=`echo $(($RANDOM % $MODULO + $OFFSET))` 
     dd if=/dev/urandom of=${BASEPATH1}/data1/greg$i bs=2048 count=$cnt 
-    cnt=`echo $(($RANDOM %1000 + $OFFSET))`
+    cnt=`echo $(($RANDOM % $MODULO + $OFFSET))`
     dd if=/dev/urandom of=${BASEPATH1}/data2/greg$i bs=2048 count=$cnt 
-    cnt=`echo $(($RANDOM %1000 + $OFFSET))`
+    cnt=`echo $(($RANDOM % $MODULO + $OFFSET))`
     dd if=/dev/urandom of=${BASEPATH2}/data3/greg$i bs=2048 count=$cnt 
-    cnt=`echo $(($RANDOM %1000 + $OFFSET))`
+    cnt=`echo $(($RANDOM % $MODULO + $OFFSET))`
     dd if=/dev/urandom of=${BASEPATH2}/data4/greg$i bs=2048 count=$cnt 
 done
 
