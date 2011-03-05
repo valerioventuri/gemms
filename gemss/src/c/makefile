@@ -44,10 +44,10 @@ yamssRecallDaemon: yamssRecallDaemon.c
 	gcc ${MYCCOPTS} -ldmapi yamssRecallDaemon.c -o yamssRecallDaemon -lgpfs
 
 clean:
-	rm -f yamssPreloadStat.so yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
+	rm -f yamssPreloadStat.so yamssRm yamssStubbify yamssRemoveDmAttr yamssRemoveWrapper yamssRecall yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
 
 install:
 	mkdir -p /usr/local/yamss/bin	
 	mkdir -p /usr/local/yamss/lib
-	cp -a yamssRecall yamssRm yamssStubbify yamssRemoveWrapper yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon /usr/local/yamss/bin
+	cp -a yamssRecall yamssRm yamssStubbify yamssRemoveWrapper yamssRemoveDmAttr yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon /usr/local/yamss/bin
 	cp -a yamssPreloadStat.so /usr/local/yamss/lib
