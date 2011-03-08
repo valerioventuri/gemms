@@ -258,8 +258,11 @@ if [ $numrec -ne 0 ]; then
        # was the recall completed?
        let ondisk=$fileblocks*1024
        if [ $ondisk -lt $filesize ]; then
-         $yamssEnqueueRecallSingle $device $filefail 0
-         echo "Recall of $filefail enqueued again due to termination of recall reordering process"
+         # check if file still exists
+         if [ -f $filefail ]; then
+           $yamssEnqueueRecallSingle $device $filefail 0
+           echo "Recall of $filefail enqueued again due to termination of recall reordering process"
+         fi
        fi
 
      done

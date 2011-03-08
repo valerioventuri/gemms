@@ -2,7 +2,7 @@ MYLFOPTS=-D_LARGE_FILE_SOURCE -D_FILE_OFFSET_BITS=64
 
 MYCCOPTS=-O2 -Wall
 
-all: yamssPreloadStat.so yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRemoveDmAttr yamssRecallDaemon
+all: yamssPreloadStat.so yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRemoveDmAttr yamssAbortDmSession yamssRecallDaemon
 
 yamssPreloadStat.so: yamssPreloadStat.c
 	gcc -m32 -fPIC ${MYCCOPTS} --shared -Wl,-soname,yamssPreloadStat.so -ldl yamssPreloadStat.c -o yamssPreloadStat.so
@@ -40,14 +40,17 @@ yamssRemoveDmAttr: yamssRemoveDmAttr.c
 yamssSetDmAttr: yamssSetDmAttr.c
 	gcc ${MYCCOPTS} yamssSetDmAttr.c -ldmapi -o yamssSetDmAttr
 
+yamssAbortDmSession: yamssAbortDmSession.c
+	gcc ${MYCCOPTS} yamssAbortDmSession.c -ldmapi -o yamssAbortDmSession
+
 yamssRecallDaemon: yamssRecallDaemon.c
 	gcc ${MYCCOPTS} -ldmapi yamssRecallDaemon.c -o yamssRecallDaemon -lgpfs
 
 clean:
-	rm -f yamssPreloadStat.so yamssRm yamssStubbify yamssRemoveDmAttr yamssRemoveWrapper yamssRecall yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon
+	rm -f yamssPreloadStat.so yamssRm yamssStubbify yamssRemoveDmAttr yamssRemoveWrapper yamssRecall yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssAbortDmSession yamssRecallDaemon
 
 install:
 	mkdir -p /usr/local/yamss/bin	
 	mkdir -p /usr/local/yamss/lib
-	cp -a yamssRecall yamssRm yamssStubbify yamssRemoveWrapper yamssRemoveDmAttr yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRecallDaemon /usr/local/yamss/bin
+	cp -a yamssRecall yamssRm yamssStubbify yamssRemoveWrapper yamssRemoveDmAttr yamssSigTermUnblock yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssAbortDmSession yamssRecallDaemon /usr/local/yamss/bin
 	cp -a yamssPreloadStat.so /usr/local/yamss/lib
