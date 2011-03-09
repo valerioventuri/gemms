@@ -386,6 +386,19 @@ void spawn_child(dm_token_t token, void *hanp, size_t hlen, char *action) {
       exit(0);
     }
 
+    // get file inode number
+    ret = dm_handle_to_ino(hanp, hlen, &inop);
+    if(ret==-1) {
+      fprintf(stderr,"%d: dm_handle_to_ino: failed, %s\n", mypid, strerror(errno));
+      // if filesystem is not mounted don't reply with error
+      // it might be a normal mmshutdown and event will be taken over
+      if(!filesystem_is_mounted()) exit(1);
+      if (dm_respond_event(sid, token, DM_RESP_ABORT, EBUSY, 0, NULL)) {
+        fprintf(stderr, "%d: dm_respond_event failed, %d/%s\n", mypid, errno, strerror(errno));
+      }
+      exit(1);
+    }
+
     // get dmapi extended attribute with tsm external object id
     memset((void *)&attrname.an_chars[0], 0, DM_ATTR_NAME_SIZE);
     memcpy((void *)&attrname.an_chars[0], "IBMObj", 6);
@@ -430,20 +443,6 @@ void spawn_child(dm_token_t token, void *hanp, size_t hlen, char *action) {
         exit(0);
       }
 
-    }
-
-
-    // get file inode number
-    ret = dm_handle_to_ino(hanp, hlen, &inop);
-    if(ret==-1) {
-      fprintf(stderr,"%d: dm_handle_to_ino: failed, %s\n", mypid, strerror(errno));
-      // if filesystem is not mounted don't reply with error
-      // it might be a normal mmshutdown and event will be taken over
-      if(!filesystem_is_mounted()) exit(1);
-      if (dm_respond_event(sid, token, DM_RESP_ABORT, EBUSY, 0, NULL)) {
-        fprintf(stderr, "%d: dm_respond_event failed, %d/%s\n", mypid, errno, strerror(errno));
-      }
-      exit(1);
     }
 
     // get file attributes structure
