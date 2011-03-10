@@ -49,6 +49,11 @@ while [ 1 ]; do
       continue
     fi
 
+    # check if filesystem is managed by gemss
+    if [ ! -f $mntpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+      continue
+    fi
+
     # yamssRecallDaemon must start also before the filesystem is mounted
     let nrun=0
     for pids in $($pidof yamssRecallDaemon); do
@@ -57,6 +62,7 @@ while [ 1 ]; do
     if [ "$nrun"x = "0x" ]; then
       $yamssRecallDaemon yam$devmm $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
     fi
+
   done
 
   # loop over all mounted filesystems
