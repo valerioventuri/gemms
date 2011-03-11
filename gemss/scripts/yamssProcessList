@@ -1,0 +1,18 @@
+#!/bin/bash
+
+device=$4
+
+mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+LOCKDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOCK
+
+STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
+
+if [ "$1" = "LIST" ]; then
+  lockfile $LOCKDIR/list_lock
+  cat $2 >> $STATDIR/list_$3.txt
+  rm -f $LOCKDIR/list_lock
+fi
+
