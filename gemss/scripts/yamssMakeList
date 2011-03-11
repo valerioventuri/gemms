@@ -37,7 +37,7 @@ rm -f $LOCKDIR/list_lock
 rm -f $STATDIR/list_tape
 rm -f $STATDIR/list_all
 
-$mmapplypolicy $device -P $yamssListPolicy -B 100000 -N $MIGRATE_NODE_LIST -s /var/tmp
+$mmapplypolicy $device -P $yamssListPolicy -B 100000 -N $MIGRATE_NODE_LIST -M YAMSSDEVICENAME=$device -s /var/tmp
 
 tapeocc=$(cat $STATDIR/list_tape | awk '{tape+=$4}END{print tape/1e15}')
 

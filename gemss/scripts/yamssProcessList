@@ -12,7 +12,7 @@ STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
 
 if [ "$1" = "LIST" ]; then
   lockfile $LOCKDIR/list_lock
-  cat $2 >> $STATDIR/list_$3.txt
+  cat $2 >> $STATDIR/list_$3
   rm -f $LOCKDIR/list_lock
 fi
 
