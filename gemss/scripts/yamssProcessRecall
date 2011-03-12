@@ -18,6 +18,7 @@
 echo $$
 
 . /usr/local/yamss/bin/yamssCommands
+. /usr/local/yamss/bin/yamssGlobalFunctions
 
 device=$1
      
@@ -39,78 +40,10 @@ STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
 DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
 DMERRORDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DMERROR
 
-check_drain_file() {
-   if [ -f $1 ]; then  
-      return 0
-   fi
-   return 1
-}
 
-function strstr () {
-    # if s2 points to a string of zero length, strstr echoes s1
-    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
-
-    # strstr echoes nothing if s2 does not occur in s1
-    case "$1" in
-    *$2*) ;;
-    *) return 1;;
-    esac
-
-    # use the pattern matching code to strip off the match and everything
-    # following it
-    first=${1/$2*/}
-
-    # then strip off the first unmatched portion of the string
-    echo "${1##$first}"
-}
-
-
-tsm_select() {
-  $dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select $1"
-  return $?
-}
-
-read_volume_name() {
-  str=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "show bfo $1" | grep "Volume Name" | head -n 1)
-  volname=$(strstr "$str" "Volume Name" |awk '{print $3}')
-
-  if [ "$volname"x != "x" ]; then
-    echo $volname
-    return 0
-  fi
-  return 1
-}
-
-
-write_stat() {
-  p1=$1
-  p2=$2
-  p3=$3
-  p4=$4
-  shift
-  shift
-  shift
-  shift
-
-  # next line is temporarily commented out
-  # lockfile -1 -l10 $p2 2>/dev/null
-
-  if [ $p4 = '0' ]; then
-    stat=OK
-  else
-    stat=ERR
-  fi
-
-  echo $p3 $stat $1 $2 $3 $4 $5 $6 $7 $8 $9 >> $p1
-
-  # next line is temporarily commented out
-  # rm -f $p2
-
-  return $p4
-}
 
 # check if drain file is present
-if check_drain_file $DRAINDIR/recall.drain; then
+if [ -f $DRAINDIR/recall.drain ]; then
    exit 0
 fi
 

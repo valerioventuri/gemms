@@ -17,13 +17,8 @@
 source /etc/profile
 
 . /usr/local/yamss/bin/yamssCommands
+. /usr/local/yamss/bin/yamssGlobalFunctions
 
-check_drain_file() {
-   if [ -f $1 ]; then  
-      return 0
-   fi
-   return 1
-}
 
 firstrun=1
 let hbnum=1
@@ -171,7 +166,7 @@ while [ 1 ]; do
      fi
 
      # Check if drain file is present
-     if check_drain_file $mntpoint/system/YAMSS_DRAIN/recall.drain; then
+     if [ -f $mntpoint/system/YAMSS_DRAIN/recall.drain ]; then
        continue
      fi
 

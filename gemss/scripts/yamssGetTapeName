@@ -15,6 +15,7 @@
 ############################################################################
 
 . /usr/local/yamss/bin/yamssCommands
+. /usr/local/yamss/bin/yamssGlobalFunctions
 
 device=$1
 
@@ -34,34 +35,6 @@ fi
   
 . $mountpoint/system/YAMSS_CONFIG/hsmConfig
 
-function strstr () {
-    # if s2 points to a string of zero length, strstr echoes s1
-    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
-
-    # strstr echoes nothing if s2 does not occur in s1
-    case "$1" in
-    *$2*) ;;
-    *) return 1;;
-    esac
-
-    # use the pattern matching code to strip off the match and everything
-    # following it
-    first=${1/$2*/}
-
-    # then strip off the first unmatched portion of the string
-    echo "${1##$first}"
-}
-
-read_volume_name() {
-  str=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "show bfo $1" | grep "Volume Name" | head -n 1)
-  volname=$(strstr "$str" "Volume Name" |awk '{print $3}')
-
-  if [ "$volname"x != "x" ]; then
-    echo $volname
-    return 0
-  fi
-  return 1
-}
 
 extobjid=$($dsmls -extobjid $2 | grep $(basename $2) | tail -n1 | awk '{print $1}')
 rc_a=$?

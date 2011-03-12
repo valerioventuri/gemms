@@ -39,16 +39,9 @@ DMRECALLDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DMRECALL
 STATDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_STAT
 DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
 
-check_drain_file() {
-   if [ -f $1 ]; then  
-      return 0
-   fi
-   return 1
-}
-
 
 # Check if drain file is present
-if check_drain_file $DRAINDIR/recall.drain; then
+if [ -f $DRAINDIR/recall.drain ]; then
    exit 0
 fi
 

@@ -16,6 +16,7 @@
 ############################################################################
 
 . /usr/local/yamss/bin/yamssCommands
+. /usr/local/yamss/bin/yamssGlobalFunctions
 
 device=$4
 
@@ -33,73 +34,6 @@ DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
 
 starttime=$(date +%s)
 
-function strstr () {
-    # if s2 points to a string of zero length, strstr echoes s1
-    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
-
-    # strstr echoes nothing if s2 does not occur in s1
-    case "$1" in
-    *$2*) ;;
-    *) return 1;;
-    esac
-
-    # use the pattern matching code to strip off the match and everything
-    # following it
-    first=${1/$2*/}
-
-    # then strip off the first unmatched portion of the string
-    echo "${1##$first}"
-}
-
-check_drain_file() {
-   if [ -f $1 ]; then  
-      echo Drain file $1 found, giving up 
-      exit 0  
-   fi
-}
-
-read_volume_name() {
-  str=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "show bfo $1" | grep "Volume Name" | head -n 1)
-  volname=$(strstr "$str" "Volume Name" |awk '{print $3}')
-
-  if [ "$volname"x != "x" ]; then
-    echo $volname
-    return 0
-  fi
-  return 1
-}
-
-tsm_select() {
-  $dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select $1"
-  return $?
-}
-
-write_stat() {
-  p1=$1
-  p2=$2
-  p3=$3
-  p4=$4
-  shift
-  shift
-  shift
-  shift
-
-  # next line is temporarily commented out
-  # lockfile -1 -l10 $p2 2>/dev/null
-
-  if [ $p4 = '0' ]; then
-    stat=OK
-  else
-    stat=ERR
-  fi
-
-  echo $p3 $stat $1 $2 $3 $4 $5 $6 $7 $8 $9 >> $p1
-
-  # next line is temporarily commented out
-  # rm -f $p2
-
-  return $p4
-}
 
 if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
   echo "Error: missing hsmConfig file in system directory"
@@ -117,7 +51,10 @@ fi
 if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
 
    # check whether a drain file has been created. If yes, exit
-   check_drain_file $DRAINDIR/migrate.drain
+   if [ -f $DRAINDIR/migrate.drain ]; then
+     echo Drain file $1 found, giving up 
+     exit 0
+   fi
 
    # in case of premigrate with filesystem above garbage collection high threshold exit immediately to speed up next scan and new migration
    if [ "$1" = "PREMIGRATE" ]; then

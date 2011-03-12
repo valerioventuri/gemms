@@ -31,6 +31,7 @@ LOGGER_BLACKLIST[12]="\[Done\]"
 LOGGER_BLACKLIST[13]="\[Sent\]"
 
 . /usr/local/yamss/bin/yamssCommands
+. /usr/local/yamss/bin/yamssGlobalFunctions
 
 device=$1
 program=$2
@@ -48,23 +49,6 @@ LOGDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_LOG
 
 . $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig
 
-function strstr () {
-    # if s2 points to a string of zero length, strstr echoes s1
-    [ ${#2} -eq 0 ] && { echo "$1" ; return 0; }
-
-    # strstr echoes nothing if s2 does not occur in s1
-    case "$1" in
-    *$2*) ;;
-    *) return 1;;
-    esac
-
-    # use the pattern matching code to strip off the match and everything
-    # following it
-    first=${1/$2*/}
-
-    # then strip off the first unmatched portion of the string
-    echo "${1##$first}"
-}
 
 # rotate the log file if needed
 let logmaxsize=$LOG_FILE_MAX_SIZE*1048576
