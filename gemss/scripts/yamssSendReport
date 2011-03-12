@@ -49,16 +49,21 @@ if [ "$ownernode"x = "x" -o "$hostnam"x = "x" -o "$ownernode"x != "$hostnam"x ];
 fi
 
 # read last report time
-let LASTREPORT=$(cat $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport 2>/dev/null)
+LASTREPORT=$(cat $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport 2>/dev/null)
 if [ $LASTREPORT"x" == "x" ]; then
-  let LASTREPORT=$(date +%s)
+  LASTREPORT=$(date +"%Y %B %A %_d %_H %_M %_S")
   echo $LASTREPORT > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport
 fi
 
-let NOW=$(date +%s)
-let DELAYREP=$NOW-$LASTREPORT
+NOW=$(date +"%Y %B %A %_d %_H %_M %_S")
+NOWEPOCH=$(date +%s)
+let PREVEPOCH=$NOWEPOCH-86400
 
-if [ $DELAYREP -gt $REPORT_FREQUENCY ]; then
+HOURLAST=$(echo $LASTREPORT | awk '{print $5}')
+HOURNOW=$(echo $NOW | awk '{print $5}')
+
+if [ "$HOURNOW"x = "$REPORT_DAILY_HOUR"x -a "$HOURNOW"x != "$HOURLAST"x ]; then
+
   echo "Sending periodic report to $REPORT_EMAIL_ADDRESS_LIST"
 
   echo $NOW > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport
@@ -66,10 +71,10 @@ if [ $DELAYREP -gt $REPORT_FREQUENCY ]; then
     echo -e "subject: GPFS+TSM report"
 
     echo "GPFS/TSM migration statistics"
-    $yamssMigrateStat $device $LASTREPORT $NOW
+    $yamssMigrateStat $device $PREVEPOCH $NOWEPOCH
 
     echo "GPFS/TSM recall statistics"
-    $yamssRecallStat $device $LASTREPORT $NOW
+    $yamssRecallStat $device $PREVEPOCH $NOWEPOCH
 
     echo Current drive status
     $dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "query drive" > /tmp/drive_status_$device

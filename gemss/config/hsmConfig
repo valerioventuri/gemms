@@ -80,8 +80,8 @@ MODULE_STAT_MANAGER=yes
 # activate optional module: send periodic report via email
 MODULE_SEND_REPORT=yes
 
-# report period (in sec)
-REPORT_FREQUENCY=86400
+# hour when to send daily report (0..24)
+REPORT_DAILY_HOUR=8
 
 # report email addresses (comma separated)
 REPORT_EMAIL_ADDRESS_LIST="Vladimir.Sapunenko@cnaf.infn.it,Daniele.Gregori@cnaf.infn.it,Luca.dellAgnello@cnaf.infn.it,Vincenzo.Vagnoni@bo.infn.it,PierPaolo.Ricci@cnaf.infn.it,Stefano.DalPra@cnaf.infn.it"
