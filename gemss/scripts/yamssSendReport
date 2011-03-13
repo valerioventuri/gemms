@@ -50,7 +50,7 @@ fi
 
 # read last report time
 LASTREPORT=$(cat $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport 2>/dev/null)
-if [ $LASTREPORT"x" == "x" ]; then
+if [ "$LASTREPORT"x == "x" ]; then
   LASTREPORT=$(date +"%Y %B %A %_d %_H %_M %_S")
   echo $LASTREPORT > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastreport
 fi
