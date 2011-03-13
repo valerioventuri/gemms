@@ -19,7 +19,8 @@ echo $$
 
 . /usr/local/yamss/bin/yamssCommands
 
-device=$1
+parid=$1
+device=$2
      
 mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
 
@@ -40,10 +41,9 @@ DRAINDIR=$SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN
 while [ 1 ]; do
 
   # Check if parent yamssMonitor is still running
-  pid=$($pidof -x yamssMonitor | awk '{print $1}')
   nrun=0
   for pids in $($pidof -x yamssMonitor); do
-    if [ "$pids" = "$PPID" ]; then
+    if [ "$pids" = "$parid" ]; then
       nrun=1
     fi
   done

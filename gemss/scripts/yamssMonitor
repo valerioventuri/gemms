@@ -25,6 +25,9 @@ let hbnum=1
 
 while [ 1 ]; do
 
+# start of workaround for memory leak in read builtin (execute in daughter shell)
+(
+
   # get existing filesystems from /etc/fstab
   cat /etc/fstab | while read -r myline; do
     dev=$(echo "$myline" | awk '{print $1}')
@@ -117,7 +120,7 @@ while [ 1 ]; do
           let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
        done
        if [ "$nrun"x = "0x" ]; then
-          $yamssProcessRemove $devname 2>&1 | $yamssLogger $devname yamssProcessRemove monitor.log &
+          $yamssProcessRemove $$ $devname 2>&1 | $yamssLogger $devname yamssProcessRemove monitor.log &
        fi
      fi
 
@@ -128,7 +131,7 @@ while [ 1 ]; do
           let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
        done
        if [ "$nrun"x = "0x" ]; then
-          $yamssProcessStubbify $devname 2>&1 | $yamssLogger $devname yamssProcessStubbify monitor.log &
+          $yamssProcessStubbify $$ $devname 2>&1 | $yamssLogger $devname yamssProcessStubbify monitor.log &
        fi
      fi
 
@@ -139,7 +142,7 @@ while [ 1 ]; do
          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
        done
        if [ "$nrun"x = "0x" ]; then
-          $yamssUpdateDamagedFiles $devname 2>&1 | $yamssLogger $devname yamssUpdateDamagedFiles monitor.log &
+          $yamssUpdateDamagedFiles $$ $devname 2>&1 | $yamssLogger $devname yamssUpdateDamagedFiles monitor.log &
        fi
      fi
 
@@ -150,7 +153,7 @@ while [ 1 ]; do
           let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
        done
        if [ "$nrun"x = "0x" ]; then
-          $yamssUpdateVolumesInErrorState $devname 2>&1 | $yamssLogger $devname yamssUpdateVolumesInErrorState monitor.log &
+          $yamssUpdateVolumesInErrorState $$ $devname 2>&1 | $yamssLogger $devname yamssUpdateVolumesInErrorState monitor.log &
        fi
      fi
 
@@ -161,7 +164,7 @@ while [ 1 ]; do
          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
        done
        if [ "$nrun"x = "0x" ]; then
-         $yamssStatManager $devname 2>&1 | $yamssLogger $devname yamssStatManager monitor.log &
+         $yamssStatManager $$ $devname 2>&1 | $yamssLogger $devname yamssStatManager monitor.log &
        fi
      fi
 
@@ -213,6 +216,9 @@ while [ 1 ]; do
      done
  
   done < /proc/mounts
+
+# end of workaround for memory leak in read builtin
+)
 
   sleep 5
 

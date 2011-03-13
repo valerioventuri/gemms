@@ -19,7 +19,8 @@ echo $$
 
 . /usr/local/yamss/bin/yamssCommands
 
-device=$1
+parid=$1
+device=$2
      
 mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
 
@@ -42,7 +43,7 @@ while [ 1 ]; do
   # Check if parent yamssMonitor is still running
   nrun=0
   for pids in $($pidof -x yamssMonitor); do
-    if [ "$pids" = "$PPID" ]; then
+    if [ "$pids" = "$parid" ]; then
       nrun=1
     fi
   done
