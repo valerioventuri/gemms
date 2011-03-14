@@ -59,10 +59,11 @@ NOW=$(date +"%Y %B %A %_d %_H %_M %_S")
 NOWEPOCH=$(date +%s)
 let PREVEPOCH=$NOWEPOCH-86400
 
-HOURLAST=$(echo $LASTREPORT | awk '{print $5}')
+DAYLAST=$(echo $LASTREPORT | awk '{print $4}')
+DAYNOW=$(echo $NOW | awk '{print $4}')
 HOURNOW=$(echo $NOW | awk '{print $5}')
 
-if [ "$HOURNOW"x = "$REPORT_DAILY_HOUR"x -a "$HOURNOW"x != "$HOURLAST"x ]; then
+if [ "$HOURNOW"x = "$REPORT_DAILY_HOUR"x -a "$DAYNOW"x != "$DAYLAST"x ]; then
 
   echo "Sending periodic report to $REPORT_EMAIL_ADDRESS_LIST"
 
