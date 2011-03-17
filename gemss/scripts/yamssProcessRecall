@@ -103,6 +103,9 @@ if [ "$recfile"x != "0x" ]; then
     # file does not exist, skip
     if [ ! -f $fn ]; then
        continue
+    else
+       # modify atime in order to set the file as accessed
+       touch -a -c $fn
     fi
 
     let fs=$(ls -l $fn|awk '{print $5}')
