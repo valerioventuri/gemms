@@ -56,7 +56,7 @@ while [ 1 ]; do
     let nrun=0
     for pids in $($pidof yamssRecallDaemon); do
       papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-      if [ "$papid"x != $$"x" ]; then
+      if [ "$papid"x != "1x" ]; then
         continue
       fi
       let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
@@ -111,7 +111,7 @@ while [ 1 ]; do
        let nrun=0
        for pids in $($pidof -x yamssSendReport); do
           papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-          if [ "$papid"x != $$"x" ]; then
+          if [ "$papid"x != "1x" ]; then
             continue
           fi
 
@@ -127,7 +127,7 @@ while [ 1 ]; do
        let nrun=0
        for pids in $($pidof -x yamssProcessRemove); do
           papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-          if [ "$papid"x != $$"x" ]; then
+          if [ "$papid"x != "1x" ]; then
             continue
           fi
           let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
@@ -142,7 +142,7 @@ while [ 1 ]; do
        let nrun=0
        for pids in $($pidof -x yamssProcessStubbify); do
           papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-          if [ "$papid"x != $$"x" ]; then
+          if [ "$papid"x != "1x" ]; then
             continue
           fi
           let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
@@ -157,7 +157,7 @@ while [ 1 ]; do
        let nrun=0
        for pids in $($pidof -x yamssUpdateDamagedFiles); do
          papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-         if [ "$papid"x != $$"x" ]; then
+         if [ "$papid"x != "1x" ]; then
            continue
          fi
          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
@@ -172,7 +172,7 @@ while [ 1 ]; do
        let nrun=0
        for pids in $($pidof -x yamssUpdateVolumesInErrorState); do
           papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-          if [ "$papid"x != $$"x" ]; then
+          if [ "$papid"x != "1x" ]; then
             continue
           fi
           let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
@@ -187,7 +187,7 @@ while [ 1 ]; do
        let nrun=0
        for pids in $($pidof -x yamssStatManager); do
          papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-         if [ "$papid"x != $$"x" ]; then
+         if [ "$papid"x != "1x" ]; then
            continue
          fi
          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
@@ -206,7 +206,7 @@ while [ 1 ]; do
      let nrun=0
      for pids in $($pidof -x yamssStartPolicy); do
         papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-        if [ "$papid"x != $$"x" ]; then
+        if [ "$papid"x != "1x" ]; then
           continue
         fi
         let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
@@ -219,7 +219,7 @@ while [ 1 ]; do
      let nrun=0
      for pids in $($pidof -x yamssReorderRecall); do
         papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-        if [ "$papid"x != $$"x" ]; then
+        if [ "$papid"x != "1x" ]; then
           continue
         fi
         let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
@@ -245,7 +245,7 @@ while [ 1 ]; do
      let nrun=0
      for pids in $($pidof -x yamssProcessRecall); do
         papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
-        if [ "$papid"x != $$"x" ]; then
+        if [ "$papid"x != "1x" ]; then
           continue
         fi
         let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
