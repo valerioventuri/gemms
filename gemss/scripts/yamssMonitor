@@ -48,8 +48,10 @@ while [ 1 ]; do
     fi
 
     # check if filesystem is managed by gemss
-    if [ ! -f $mntpoint/system/YAMSS_CONFIG/hsmConfig ]; then
-      continue
+    if mountpoint -q $mntpoint; then
+      if [ ! -f $mntpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+        continue
+      fi
     fi
 
     # yamssRecallDaemon must start also before the filesystem is mounted
