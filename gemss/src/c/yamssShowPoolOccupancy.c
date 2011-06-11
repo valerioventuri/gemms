@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
       exit(1);
     }
 
-    printf("%s %d %lld %lld %lld %lld %lld\n", poolName, statBuf[i].f_bsize, statBuf[i].f_blocks, statBuf[i].f_bfree, statBuf[i].f_bavail, statBuf[i].f_mblocks, statBuf[i].f_mfree);
+    printf("%s %lld %lld %lld %lld\n", poolName, statBuf[i].f_blocks*statBuf[i].f_bsize/1024, statBuf[i].f_bavail*statBuf[i].f_bsize/1024, statBuf[i].f_mblocks*statBuf[i].f_bsize/1024, statBuf[i].f_mfree*statBuf[i].f_bsize/1024);
 
   }
 
