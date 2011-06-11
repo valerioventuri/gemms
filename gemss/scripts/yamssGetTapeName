@@ -36,7 +36,7 @@ fi
 . $mountpoint/system/YAMSS_CONFIG/hsmConfig
 
 
-extobjid=$($dsmls -extobjid $2 | grep $(basename $2) | tail -n1 | awk '{print $1}')
+extobjid=$($dsmls -extobjid $2 | grep -- $(basename $2) | tail -n1 | awk '{print $1}')
 rc_a=$?
 objectid=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "select object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid='$extobjid'")
 rc_b=$?
