@@ -124,6 +124,22 @@ while [ 1 ]; do
        fi
      fi
 
+     if [ "$MODULE_GENERATE_FILE_LIST"x = "yesx" ]; then
+       # start yamssGenList process for this filesystem if not yet running
+       let nrun=0
+       for pids in $($pidof -x yamssGenList); do
+          papid=$(egrep "^PPid:" /proc/$pids/status | awk '{print $2}')
+          if [ "$papid"x != "1x" ]; then
+            continue
+          fi
+
+          let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
+       done
+       if [ "$nrun"x = "0x" ]; then
+          $yamssMakeList $devname 2>&1 | $yamssLogger $devname yamssMakeList monitor.log &
+       fi
+     fi
+
      if [ "$MODULE_REMOVE"x = "yesx" ]; then 
        # start yamssProcessRemove process for this filesystem if not yet running
        let nrun=0

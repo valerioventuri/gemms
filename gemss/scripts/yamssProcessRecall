@@ -95,6 +95,9 @@ if [ "$recfile"x != "0x" ]; then
   tmpdir=$(mktemp -d /tmp/tsmrecall.XXXXXXXX)
   cd $tmpdir
 
+  # determine the GPFS storage pool with the largest availability of space
+  goodpool=$($yamssShowPoolOccupancy -f $device)
+
   # generate filelist collection file
   let size=0
   let nfiles=0
@@ -113,6 +116,9 @@ if [ "$recfile"x != "0x" ]; then
     # file is already on disk, skip
     if [ $bs -ge $fs ]; then
        continue
+    elif [ "$RECALL_USE_FREE_GPFS_POOL"x = "yesx" -a $bs -eq 0 ]; then
+       # place the stub file into the emptiest storage pool
+       $mmchattr -P $goodpool $fn 
     fi
 
     let nfiles=$nfiles+1
