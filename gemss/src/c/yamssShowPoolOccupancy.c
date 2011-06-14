@@ -33,15 +33,19 @@ int main(int argc, char **argv) {
   int nPools, statSize;
   gpfs_statfspool_t *statBuf;
   int i;
-  char poolName[GPFS_MAXNAMLEN];
+  char poolName[GPFS_MAXNAMLEN], max_poolName[GPFS_MAXNAMLEN];
   struct mntent *ent;
   FILE *mnttab;
+  int flag;
+  long long max_avail;
 
-  if(argc!=2) {
-    fprintf(stderr,"Usage: yamssShowPoolOccupancy gpfs_device\n");
+  if(argc==1||(argc==2&&!strcmp(argv[1],"-f"))||(argc==3&&strcmp(argv[1],"-f"))||argc>3) {
+    fprintf(stderr,"Usage: yamssShowPoolOccupancy [-f] gpfs_device\n");
     exit(1);
   }
-  snprintf(fsdev,256,"/dev/%s",argv[1]);
+  flag=!strcmp(argv[1],"-f")?1:0;  
+
+  snprintf(fsdev,256,"/dev/%s",flag?argv[2]:argv[1]);
 
   /* look for the mount point where the file resides */
   mnttab = fopen("/etc/mtab", "r");
@@ -71,6 +75,8 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  max_avail=-1;
+  max_poolName[0]='\0';
   for(i=0; i<nPools; i++) {
 
     if(gpfs_getpoolname(ent->mnt_dir, statBuf[i].f_poolid, poolName, GPFS_MAXNAMLEN)) {
@@ -79,11 +85,26 @@ int main(int argc, char **argv) {
       exit(1);
     }
 
-    printf("%s %lld %lld %lld %lld\n", poolName, statBuf[i].f_blocks*statBuf[i].f_bsize/1024, statBuf[i].f_bavail*statBuf[i].f_bsize/1024, statBuf[i].f_mblocks*statBuf[i].f_bsize/1024, statBuf[i].f_mfree*statBuf[i].f_bsize/1024);
-
+    if(flag) {
+      if(statBuf[i].f_bavail>max_avail) {
+        max_avail=statBuf[i].f_bavail;
+        strcpy(max_poolName,poolName);
+      }
+    } else {
+      printf("%s %lld %lld %lld %lld\n", poolName, statBuf[i].f_blocks*statBuf[i].f_bsize/1024, statBuf[i].f_bavail*statBuf[i].f_bsize/1024, statBuf[i].f_mblocks*statBuf[i].f_bsize/1024, statBuf[i].f_mfree*statBuf[i].f_bsize/1024);
+    }
   }
 
   free(statBuf);
+
+  if(flag) {
+    if(max_avail<0) {
+      fprintf(stderr, "Command failed in an impossible way\n");
+      exit(1);
+    } else {
+      printf("%s\n",max_poolName);
+    }
+  }
 
   return 0;
 
