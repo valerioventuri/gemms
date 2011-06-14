@@ -43,6 +43,7 @@ yamssSendReport=/usr/local/yamss/bin/yamssSendReport
 yamssListPolicy=/usr/local/yamss/bin/yamssListPolicy
 yamssShowPoolOccupancy=/usr/local/yamss/bin/yamssShowPoolOccupancy
 yamssMakeList=/usr/local/yamss/bin/yamssMakeList
+yamssGenList=/usr/local/yamss/bin/yamssGenList
 mmapplypolicy=/usr/lpp/mmfs/bin/mmapplypolicy
 javadb2="java -client -cp /usr/local/yamss/lib/db2jcc.jar:/usr/local/yamss/lib"
 ngserver="java -cp /usr/local/yamss/lib/nailgun-0.7.1.jar:/usr/local/yamss/lib/db2jcc.jar:/usr/local/yamss/lib -server com.martiansoftware.nailgun.NGServer 127.0.0.1"

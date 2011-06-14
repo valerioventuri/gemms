@@ -1,0 +1,75 @@
+#!/bin/ksh
+############################################################################
+# Copyright 2008-2010 Istituto Nazionale di Fisica Nucleare
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+############################################################################
+
+# print PID for logger
+echo $$
+
+# Include global declarations and service routines.
+. /usr/lpp/mmfs/bin/mmglobfuncs
+. /usr/lpp/mmfs/bin/mmsdrfsdef
+
+export device=$arg1
+
+export mountpoint=$(cat /proc/mounts | grep "^/dev/$device " | awk '{print $2}')
+
+. /usr/local/yamss/bin/yamssCommands
+
+export SYSTEM_DIRECTORY_PATH=$mountpoint/system
+
+export GPFS_rshPath="/usr/bin/ssh"
+
+if [ ! -f $mountpoint/system/YAMSS_CONFIG/hsmConfig ]; then
+  echo "Error: missing hsmConfig file in system directory"
+  cleanupAndExit 0        
+fi
+
+. $mountpoint/system/YAMSS_CONFIG/hsmConfig
+
+
+# Check if this is the owner node of the TSM failover group
+hostnam=$(hostname|cut -d. -f1)
+ownerid=$(cat $mountpoint/.SpaceMan/hsmfsconfig.xml | grep Ownernode | cut -d">" -f2 | cut -d"<" -f1)
+ownernode=$($mmlscluster | awk '{print $1,$2}' | grep "^$ownerid " | awk '{print $2}' | cut -d. -f1)
+
+if [ "$ownernode"x = "x" -o "$hostnam"x = "x" -o "$ownernode"x != "$hostnam"x ]; then
+  cleanupAndExit 0
+fi
+
+# read last report time
+LASTLIST=$(cat $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastlist 2>/dev/null)
+if [ "$LASTLIST"x == "x" ]; then
+  LASTLIST=$(date +"%Y %B %A %_d %_H %_M %_S")
+  echo $LASTLIST > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastlist
+fi
+
+NOW=$(date +"%Y %B %A %_d %_H %_M %_S")
+NOWEPOCH=$(date +%s)
+let PREVEPOCH=$NOWEPOCH-86400
+
+DAYLAST=$(echo $LASTLIST | awk '{print $4}')
+DAYNOW=$(echo $NOW | awk '{print $4}')
+HOURNOW=$(echo $NOW | awk '{print $5}')
+
+if [ "$HOURNOW"x = "$GENERATE_DAILY_HOUR"x -a "$DAYNOW"x != "$DAYLAST"x ]; then
+
+  echo "Generating daily list of files in the filesystem"
+
+  echo $NOW > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastlist
+
+  $yamssMakeList $device
+
+fi
+
