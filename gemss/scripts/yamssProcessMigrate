@@ -77,10 +77,10 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
       # if no group or fileset name then check filesystem
       if [ "$5"x = "x" ]; then
         occupancy=$(df -P $mountpoint | tail -n 1 | awk '{print $5}' | tr "%" " ")
-      if [ "$occupancy"x = "x" ]; then
-         echo Error while getting quota for device $device
-         exit 0
-      fi
+        if [ "$occupancy"x = "x" ]; then
+           echo Error while getting quota for device $device
+           exit 0
+        fi
       # else check group quota
       else
         # for some strange reason we need to use su 
