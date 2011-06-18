@@ -58,22 +58,7 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
 
    # in case of premigrate with filesystem above garbage collection high threshold exit immediately to speed up next scan and new migration
    if [ "$1" = "PREMIGRATE" ]; then
-      # for the moment does not manage the case of group quota filled up
-      occupancy=$(df -P $mountpoint | tail -n 1 | awk '{print $5}' | tr "%" " ")
-      if [ "$occupancy"x = "x" ]; then
-         echo Error while getting quota for device $device
-         exit 0
-      fi
-      # if occupancy is not OK exit
-      if [ $occupancy -ge $GARBAGE_COLLECTOR_HIGH_THRESHOLD ]; then
-         echo Exiting since garbage collector high threshold has been reached
-         exit 0
-      fi
-   fi
-
-   # in case of MIGRATE check if file system or group quota occupancy is below threshold
-   if [ "$1" = "MIGRATE" ]; then
-      # if no group name then check filesystem
+      # if no group or fileset name then check filesystem
       if [ "$5"x = "x" ]; then
         occupancy=$(df -P $mountpoint | tail -n 1 | awk '{print $5}' | tr "%" " ")
       if [ "$occupancy"x = "x" ]; then
@@ -83,9 +68,35 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
       # else check group quota
       else
         # for some strange reason we need to use su 
-        occupancy=$(su - -c "$mmlsquota -v -g $5 $device" | egrep "^$device" | awk '{print int($3/$4*100)}')
+        occupancy=$(su - -c "$mmlsquota -v $5 $6 $device" | egrep "^$device" | awk '{print int($3/$4*100)}')
         if [ "$occupancy"x = "x" ]; then
-          echo Error while getting quota for group $5 and device $device
+          echo Error while getting quota for group or fileset $6 and device $device
+          exit 0
+        fi
+      fi
+
+      # if occupancy is not OK exit
+      if [ $occupancy -ge $GARBAGE_COLLECTOR_HIGH_THRESHOLD ]; then
+         echo Exiting since garbage collector high threshold has been reached
+         exit 0
+      fi
+   fi
+
+   # in case of MIGRATE check if file system or group quota occupancy is below threshold
+   if [ "$1" = "MIGRATE" ]; then
+      # if no group or fileset name then check filesystem
+      if [ "$5"x = "x" ]; then
+        occupancy=$(df -P $mountpoint | tail -n 1 | awk '{print $5}' | tr "%" " ")
+      if [ "$occupancy"x = "x" ]; then
+         echo Error while getting quota for device $device
+         exit 0
+      fi
+      # else check group quota
+      else
+        # for some strange reason we need to use su 
+        occupancy=$(su - -c "$mmlsquota -v $5 $6 $device" | egrep "^$device" | awk '{print int($3/$4*100)}')
+        if [ "$occupancy"x = "x" ]; then
+          echo Error while getting quota for group or fileset $6 and device $device
           exit 0
         fi 
       fi
