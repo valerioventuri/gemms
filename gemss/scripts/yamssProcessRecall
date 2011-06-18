@@ -118,6 +118,7 @@ if [ "$recfile"x != "0x" ]; then
        continue
     elif [ "$RECALL_USE_FREE_GPFS_POOL"x = "yesx" -a $bs -eq 0 ]; then
        # place the stub file into the emptiest storage pool
+       echo Placing file $fn in GPFS storage pool $goodpool
        $mmchattr -P $goodpool $fn 
     fi
 
