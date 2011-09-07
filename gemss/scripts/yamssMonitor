@@ -95,7 +95,12 @@ while [ 1 ]; do
 
      # log heartbeat
      if [ $hbnum -eq 50 ]; then
-        printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log
+       # Check if drain file is present
+       if [ -f $mntpoint/system/YAMSS_DRAIN/recall.drain ]; then
+         printf "$$\nDrain file found for recalls, giving up\n" | $yamssLogger $devname yamssMonitor monitor.log
+       else
+         printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log
+       fi
      fi
 
      # start nailgun, but log just on the first filesystem log file (should fix it for multiple filesystems)
@@ -215,11 +220,6 @@ while [ 1 ]; do
        fi
      fi
 
-     # Check if drain file is present
-     if [ -f $mntpoint/system/YAMSS_DRAIN/recall.drain ]; then
-       continue
-     fi
-
      # start yamssStartPolicy process for this filesystem if not yet running
      let nrun=0
      for pids in $($pidof -x yamssStartPolicy); do
@@ -231,6 +231,11 @@ while [ 1 ]; do
      done
      if [ "$nrun"x = "0x" ]; then
         $yamssStartPolicy $devname 2>&1 | $yamssLogger $devname yamssStartPolicy startpolicy.log &
+     fi
+
+     # Check if drain file is present
+     if [ -f $mntpoint/system/YAMSS_DRAIN/recall.drain ]; then
+       continue
      fi
 
      # start yamssReorderRecall process for this filesystem if not yet running

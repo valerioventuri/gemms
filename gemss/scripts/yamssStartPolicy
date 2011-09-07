@@ -68,6 +68,7 @@ export hostnam=$(hostname|cut -d. -f1)
      # if in draining, exit without scan
      if [ -f $SYSTEM_DIRECTORY_PATH/YAMSS_DRAIN/migrate.drain ]; then
         echo Drain file found while starting policy, giving up
+        sleep 120
         cleanupAndExit 0
      fi
     
