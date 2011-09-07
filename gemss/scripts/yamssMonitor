@@ -97,7 +97,7 @@ while [ 1 ]; do
      if [ $hbnum -eq 50 ]; then
        # Check if drain file is present
        if [ -f $mntpoint/system/YAMSS_DRAIN/recall.drain ]; then
-         printf "$$\nDrain file found for recalls, giving up\n" | $yamssLogger $devname yamssMonitor monitor.log
+         printf "$$\nDrain file found for recalls\n" | $yamssLogger $devname yamssMonitor monitor.log
        else
          printf "$$\nProcess is running\n" | $yamssLogger $devname yamssMonitor monitor.log
        fi
