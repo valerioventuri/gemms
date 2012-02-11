@@ -252,9 +252,14 @@ if [ $numrec -ne 0 ]; then
        let ondisk=$fileblocks*1024
        if [ $ondisk -lt $filesize ]; then
          # check if file still exists
-         if [ -f $filefail ]; then
-           $yamssEnqueueRecallSingle $device $filefail 0
-           echo "Recall of $filefail enqueued again due to termination of recall reordering process"
+         if [ -f $filefail ]; then 
+           # check if file is migrated according to TSM
+           if yamssGetDmAttr $filefail IBMObj >/dev/null 2>&1; then 
+             $yamssEnqueueRecallSingle $device $filefail 0
+             echo "Recall of $filefail enqueued again due to termination of recall reordering process"
+           else
+             echo "Achtung: $filefail was requested for recall, has $ondisk bytes on disk and a size of $filesize bytes, but does not appear as migrated. Giving up"
+           fi
          fi
        fi
 
