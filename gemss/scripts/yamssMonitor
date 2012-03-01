@@ -273,6 +273,7 @@ while [ 1 ]; do
         fi
         let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$devname$" | wc -l)
      done
+     let nrun=$nrun+1
      for nlau in $(seq $nrun $RECALL_RUNNING_THREADS); do
         $yamssProcessRecall $devname 2>&1 | $yamssLogger $devname yamssProcessRecall monitor.log &
      done
