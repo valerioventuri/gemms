@@ -243,6 +243,13 @@ if [ "$recfile"x != "0x" ]; then
      if [ $rc = "0" ]; then
        echo Recall of file $file succeded
 
+      # check if file is ill placed
+      if $mmlsattr -L $file | egrep "^flags:" | egrep illplaced > /dev/null; then
+        # file is found to be illplaced
+        echo Warning: file $file is found to be ill placed. Restriping it
+        $mmrestripefile -p $file
+      fi
+
        # update recall table if StoRM is used. Warning: error conditions are not handled. If restful service is unavailable recall table is silently not updated. To be fixed
        if [ "$RECALL_USE_STORM"x = "1x" ]; then
           for taskid in $($attr -q -g TSMRecT $file 2>/dev/null | tr "," " "); do 
