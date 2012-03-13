@@ -122,10 +122,10 @@ if [ "$recfile"x != "0x" ]; then
        $mmchattr -P $goodpool $fn 
 
        # check if file is ill placed
-       if $mmlsattr -L $file | egrep "^flags:" | egrep illplaced > /dev/null; then
+       if $mmlsattr -L $fn | egrep "^flags:" | egrep illplaced > /dev/null; then
          # file is found to be illplaced
-         echo Warning: file $file is found to be ill placed. Restriping it
-         $mmrestripefile -p $file
+         echo Warning: file $fn is found to be ill placed. Restriping it
+         $mmrestripefile -p $fn
        fi
 
     fi
