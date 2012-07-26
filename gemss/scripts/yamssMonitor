@@ -64,7 +64,15 @@ while [ 1 ]; do
       let nrun=$nrun+$(cat /proc/$pids/cmdline 2>/dev/null | tr "\0" "\n" | tail -n1 | egrep "^$mntpoint$" | wc -l)
     done
     if [ "$nrun"x = "0x" ]; then
-      $yamssRecallDaemon yam$devmm $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
+      # proceed only if dmapi is enabled for this filesystem
+      dmen=$($mmlsfs $devname -z 2>/dev/null)
+      rc=$?
+      if [ "$rc"x = "0x" ]; then
+        isdmenabled=$(echo $dmen | sed 's/.*-z//g' | awk '{print $1}')
+        if [ "$isdmenabled"x = "yesx" ]; then
+          $yamssRecallDaemon yam$devmm $mntpoint 2>&1 | $yamssLogger $devname yamssRecallDaemon monitor.log $mntpoint &
+        fi
+      fi
     fi
 
   done
