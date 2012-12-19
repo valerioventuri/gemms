@@ -225,12 +225,28 @@ if [ $numrec -ne 0 ]; then
    done < $tmpdir/recall.queue.proc.tmp
    cat $tmpdir/recall.queue.proc.tmp | awk '{print $1}' > $tmpdir/recall.queue.proc
 
+   # cleanup the damned directory
+   rm -rf "$mountpoint/.SpaceMan/tapeOptimizedRecall/*"
+
    # call the dsmrecall with preview option to produce tape ordered lists
    cd $tmpdir
-   $yamssWatchdog -t $RECALL_REORDER_TIMEOUT $dsmrecall -t -p -filelist=$tmpdir/recall.queue.proc
+   $yamssWatchdog -t $RECALL_REORDER_TIMEOUT $dsmrecall -p -filelist=$tmpdir/recall.queue.proc $mountpoint 2>&1 > dsmrecall.out.txt
+   signum=$?
+
+   # dump the output of the command
+   cat dsmrecall.out.txt
+
+   # extract file collection from dsmrecall output
+   filecoll=$(cat dsmrecall.out.txt | grep "Output collection list created" | cut -d: -f2 | awk '{print $1}')
+   if [ "$filecoll"x = "x" -o ! -f $filecoll ]; then
+      # this should be impossible
+      if [ $signum -eq 0 ]; then
+         echo "Weird, cannot determine output collection list"
+         signum=23
+      fi
+   fi
 
    # check whether the process exited successfully and/or it was terminated by a signal
-   signum=$?
    if [ $signum -ne 0 ]; then
 
      if [ $signum -gt 128 -a $signum -lt 193 ]; then	# it is a signal
@@ -274,6 +290,9 @@ if [ $numrec -ne 0 ]; then
 
    # Acquire lock on recall queue
    lockfile -1 -l600 $LOCKDIR/recall.queue.lock
+
+   # copy the damned directory locally
+   cp $(dirname $filecoll)/* .
 
    # loop of list of tape ordered files
    for file in $(ls | grep filelist.ordered.tape); do

@@ -136,12 +136,22 @@ if [ "$recfile"x != "0x" ]; then
     echo $myline >> $(basename $recfile)
   done < $recfile.running
 
-  echo $nfiles $size ./$(basename $recfile) > filelist.ordered.collection
+  # create a temporary directory to store filelist.ordered.collection into the filesystem, for unknown reasons
+  if [ ! -d $SYSTEM_DIRECTORY_PATH/YAMSS_RECALL_TEMP ]; then
+     mkdir $SYSTEM_DIRECTORY_PATH/YAMSS_RECALL_TEMP
+  fi
+  filelistdir=$(mktemp -d $SYSTEM_DIRECTORY_PATH/YAMSS_RECALL_TEMP/XXXXXXXX)
+
+  echo $nfiles $size $filelistdir/$(basename $recfile) > $filelistdir/filelist.ordered.collection
+
+  cp $(basename $recfile) $filelistdir/.
+
+  echo Recall process started
 
   # start tape ordered recall
   startrectime=$(date +%s)
   glbvar=$(mktemp /tmp/glbvar.XXXXXXXX)
-  $yamssWatchdog -t $RECALL_PROCESS_TIMEOUT $dsmrecall -d -t -filelist=filelist.ordered.collection | while read -r myline; do
+  $yamssWatchdog -t $RECALL_PROCESS_TIMEOUT $dsmrecall -d -filelist=$filelistdir/filelist.ordered.collection $mountpoint | while read -r myline; do
      # try to catch dsmrecall output to trace real time what it is doing
      let i=0
      # print line to stdout
@@ -167,6 +177,10 @@ if [ "$recfile"x != "0x" ]; then
   done
 
   stoprectime=$(date +%s)
+
+  # remove the temporary directory
+  rm -f $filelistdir/*
+  rmdir $filelistdir
 
   . $glbvar
   rm -f $glbvar

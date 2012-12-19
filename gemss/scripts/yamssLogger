@@ -29,7 +29,9 @@ LOGGER_BLACKLIST[10]="Server Version"
 LOGGER_BLACKLIST[11]="Server date/time"
 LOGGER_BLACKLIST[12]="\[Done\]"
 LOGGER_BLACKLIST[13]="\[Sent\]"
-
+LOGGER_BLACKLIST[14]="Start Tape Optimized Recall"
+LOGGER_BLACKLIST[15]="----------------------------"
+LOGGER_BLACKLIST[16]="ANS1733I"
 . /usr/local/yamss/bin/yamssCommands
 . /usr/local/yamss/bin/yamssGlobalFunctions
 
