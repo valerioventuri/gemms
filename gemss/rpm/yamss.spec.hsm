@@ -1,11 +1,11 @@
 Summary: INFN GEMSS
 Name: gemss-hsm
-Version: 1.4.2
+Version: 1.5.1
 Release: 1
 Source0: %{name}-%{version}.tar.gz
 License: GPL
 Group: CNAF
-Requires: gpfs.base >= 3.3.0-14 jdk >= 2000:1.5 TIVsm-HSM >= 6.1.4
+Requires: gpfs.base >= 3.4.0-17 jdk >= 2000:1.5 TIVsm-HSM >= 6.3.1
 %description
 GEMSS stands for Grid-EnabledMass Storage System, and implements an interface between StoRM, GPFS and TSM.
 %pre

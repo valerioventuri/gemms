@@ -75,8 +75,13 @@ export hostnam=$(hostname|cut -d. -f1)
      if [ $DELAY -gt $MIGRATE_SCAN_FREQUENCY ]; then
         echo $NOW > $SYSTEM_DIRECTORY_PATH/YAMSS_STAT/lastscan
 
-        $mmapplypolicy $device -m $MIGRATE_RUNNING_THREADS -B $MIGRATE_FILES_PER_THREAD -N $MIGRATE_NODE_LIST -s /var/tmp
-        rc=$? 
+        if [ "$USE_PATH_FOR_MIGRATE_SCAN"x == "yesx" -a "$PATH_FOR_MIGRATE_SCAN"x != "x" ]; then
+           $mmapplypolicy $mountpoint/$PATH_FOR_MIGRATE_SCAN -m $MIGRATE_RUNNING_THREADS -B $MIGRATE_FILES_PER_THREAD -N $MIGRATE_NODE_LIST -s /var/tmp
+           rc=$?
+        else
+           $mmapplypolicy $device -m $MIGRATE_RUNNING_THREADS -B $MIGRATE_FILES_PER_THREAD -N $MIGRATE_NODE_LIST -s /var/tmp
+           rc=$? 
+        fi
 
         # If the command completed successfully, or if there is an
         # unacceptable error, there is nothing more we can do.

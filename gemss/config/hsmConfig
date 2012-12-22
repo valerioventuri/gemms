@@ -1,39 +1,45 @@
 # storm node serving the file system (if any)
-#STORM_BACKEND_NODE="storm-fe-virgo-01"
-#Virgo disattivato almeno inizialmente
+STORM_BACKEND_NODE="storm-be-lhcb"
 
 # migrate node list (comma separated)
-MIGRATE_NODE_LIST="tsm-hsm-12,tsm-hsm-13"
+MIGRATE_NODE_LIST="tsm-hsm-4,tsm-hsm-5"
 
 # filesystem scan minimum frequency (in sec)
 MIGRATE_SCAN_FREQUENCY=1800
 
+# set to yes if you want the scan to be performed on a subtree of the filesystem
+USE_PATH_FOR_MIGRATE_SCAN=yes
+
+# if previous is yes, set this to the path of the subtree (relative to the mountpoint)
+PATH_FOR_MIGRATE_SCAN=lhcb/tape
+
 # maximum number of running migrate threads per node
 MIGRATE_RUNNING_THREADS=2
+#MIGRATE_RUNNING_THREADS=1
 
 # maximum number of files for each migrate thread
 MIGRATE_FILES_PER_THREAD=200
 
 # automigration flag (set to 1 if StoRM is not used to flag candidates for migration)
-MIGRATE_AUTO=1
+MIGRATE_AUTO=0
 
 # maximum retention on disk when automigration is off after which file is automigrated (in sec)
 MIGRATE_MAX_RETENTION=259200
 
 # timeout for migrate command (in secs)
-MIGRATE_PROCESS_TIMEOUT=7200
+MIGRATE_PROCESS_TIMEOUT=14400
 
 # garbage collection low threshold (in %)
-GARBAGE_COLLECTOR_LOW_THRESHOLD=85
+GARBAGE_COLLECTOR_LOW_THRESHOLD=96
 
 # garbage collection high threshold (in %)
-GARBAGE_COLLECTOR_HIGH_THRESHOLD=90
+GARBAGE_COLLECTOR_HIGH_THRESHOLD=98
 
 # recall node list (comma separated). Warning: must contain the owner node of the filesystem
-RECALL_NODE_LIST="tsm-hsm-12,tsm-hsm-13"
+RECALL_NODE_LIST="tsm-hsm-4,tsm-hsm-5"
 
 # flag to turn on the StoRM recall interface (set to 0 if StoRM is not used)
-RECALL_USE_STORM=0
+RECALL_USE_STORM=1
 
 # maximum number of files taken over from the StoRM recall table in one step
 RECALL_STORM_DEQUEUE_MAX=500
@@ -45,25 +51,25 @@ RECALL_LOCAL_DEQUEUE_MAX=500
 RECALL_REORDER_TIMEOUT=600
 
 # timeout for process recall command (in secs)
-RECALL_PROCESS_TIMEOUT=7200
+RECALL_PROCESS_TIMEOUT=28800
 
 # maximum number of running recall threads per node
-RECALL_RUNNING_THREADS=2
+RECALL_RUNNING_THREADS=3
 
 # number of retrials for each file recall (set zero for no retrials)
-RECALL_MAX_RETRY=2
+RECALL_MAX_RETRY=10
 
 # threshold for giving high priority to recall of one tape (in sec)
 RECALL_MAX_RETENTION=1800
 
 # implicit pin time interval for transparent recalls (in sec)
-RECALL_IMPLICIT_PINTIME=172800
-
-# period of time after which dmapi recall error file are cleaned up (in sec)
-RECALL_DMAPI_ERROR_CLEANUP=259200
+RECALL_IMPLICIT_PINTIME=259200
 
 # choose to recall files to the GPFS pool with the largest available space
 RECALL_USE_FREE_GPFS_POOL=yes
+
+# period of time after which dmapi recall error file are cleaned up (in sec)
+RECALL_DMAPI_ERROR_CLEANUP=259200
 
 # activate optional module: asyncronous remove
 MODULE_REMOVE=no
@@ -92,9 +98,6 @@ MODULE_GENERATE_FILE_LIST=yes
 # hour when to generate daily list (0..24)
 GENERATE_DAILY_HOUR=0
 
-# report email addresses (comma separated)
-REPORT_EMAIL_ADDRESS_LIST="Vladimir.Sapunenko@cnaf.infn.it,Daniele.Gregori@cnaf.infn.it,Luca.dellAgnello@cnaf.infn.it,Vincenzo.Vagnoni@bo.infn.it,PierPaolo.Ricci@cnaf.infn.it,Stefano.DalPra@cnaf.infn.it"
-
 # maximum number of read/write errors before considering a tape defunct
 READWRITE_MAX_ERRORS=5
 
@@ -111,7 +114,7 @@ TSM_ID="admin"
 TSM_PASSWORD="admin"
 
 # TSM server name
-TSM_SERVER="tsm-server-4"
+TSM_SERVER="tsm-server"
 
 # TSM server user name
 TSM_SERVER_ID="admin"
@@ -126,5 +129,8 @@ TSM_SERVER_DB_PORT=3700
 TSM_SERVER_DB_NAME="tsmdb1"
 
 # TSM proxy asnode name
-TSM_PROXY_NODE="PROXY_NODE_TEST"
+TSM_PROXY_NODE="PROXY_NODE_LHCB"
+
+# report email addresses (comma separated)
+REPORT_EMAIL_ADDRESS_LIST="Vladimir.Sapunenko@cnaf.infn.it,Daniele.Gregori@cnaf.infn.it,Luca.dellAgnello@cnaf.infn.it,Vincenzo.Vagnoni@bo.infn.it,PierPaolo.Ricci@cnaf.infn.it,Stefano.DalPra@cnaf.infn.it,Paolo.Franchini@cnaf.infn.it"
 
