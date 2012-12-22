@@ -232,9 +232,9 @@ if [ "$recfile"x != "0x" ]; then
      fi
 
      if [ "$stat"x != "RES"x ]; then
-       extobjid=$($dsmls -extobjid $file | grep $(basename $file) | tail -n1 | awk '{print $1}')
+       extobjid=$($yamssGetDmAttr $file IBMPMig 2>/dev/null)
        rc_a=$?
-       objectid=$(tsm_select "object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid='$extobjid'")
+       objectid=$(tsm_select "object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid=upper('$extobjid')")
        rc_b=$?
        volname=$(read_volume_name $objectid)
        rc_c=$?

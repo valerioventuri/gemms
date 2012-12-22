@@ -211,10 +211,22 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
      # file size in bytes
      filesize=$(ls -l $file | awk '{print $5}')
      # get status of the file: m, p, r
-     status=$($dsmls $file | grep $(basename $file) | tail -n1 | awk '{print $4}')
+     IBMObj=$($yamssGetDmAttr $file IBMObj 2>/dev/null)
+     rcIBMObj=$?
+     IBMPMig=$($yamssGetDmAttr $file IBMPMig 2>/dev/null)
+     rcIBMPMig=$?
+     extobjid=0
+     if [ "$rcIBMObj"x != "0x" -a "$rcIBMPMig"x != "0x" ]; then
+       status=r
+     elif [ "$rcIBMPMig"x = "0x" ]; then
+       status=p
+       extobjid=$IBMPMig
+     elif [ "$rcIBMObj"x = "0x" ]; then
+       status=m
+       extobjid=$(echo $IBMObj | cut -c1-56);
+     fi
 
      rc=1
-     extobjid=0
      # check if file is still resident, i.e. if migration failed
      if [ $status"x" != "x" -a $status"x" != "rx" ]; then
         if [ "$1" = "PREMIGRATE" -o $status"x" = "mx" ]; then
@@ -226,14 +238,12 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
         # add extended attribute to flag it is migrated
         $attr -s storm.migrated -V "" $file >/dev/null 2>&1
 
-        extobjid=$($dsmls -extobjid $file | grep $(basename $file) | tail -n1 | awk '{print $1}')
-        rc_a=$?
-        objectid=$(tsm_select "object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid='$extobjid'")
+        objectid=$(tsm_select "object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid=upper('$extobjid')")
         rc_b=$?
         volname=$(read_volume_name $objectid)
         rc_c=$?
 
-        if [ $rc_a != 0 -o  $rc_b != 0 -o  $rc_c != 0 ]; then
+        if [ $rc_b != 0 -o  $rc_c != 0 ]; then
            volname=null 
         fi
      else
@@ -246,7 +256,7 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
 
      # get insert time from TSM DB
      if [ $extobjid"x" != "0x" ]; then 
-       inserttime=$($dsmadmc -id=$TSM_ID -pass=$TSM_PASSWORD -tabdelimited -dataonly=yes "select INSERT_DATE from spacemgfiles where filespace_name='$mountpoint' and EXTOBJID='$extobjid'"|cut -d. -f1 | tr "-" " " | tr ":" " " | awk '{print mktime($0)}')
+       inserttime=$($dsmadmc -id=$TSM_ID -pass=$TSM_PASSWORD -tabdelimited -dataonly=yes "select INSERT_DATE from spacemgfiles where filespace_name='$mountpoint' and EXTOBJID=upper('$extobjid')"|cut -d. -f1 | tr "-" " " | tr ":" " " | awk '{print mktime($0)}')
      else
        inserttime=$(date +%s)
      fi
