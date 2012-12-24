@@ -32,6 +32,8 @@ fi
 
 . $SYSTEM_DIRECTORY_PATH/YAMSS_CONFIG/hsmConfig
 
+export GPFSSDRFILE=/var/mmfs/gen/mmsdrfs
+
 while [ 1 ]; do
 
   sleep 5
@@ -52,7 +54,7 @@ while [ 1 ]; do
   # Check if this is the owner node of the TSM failover group
   hostnam=$(hostname|cut -d. -f1)
   ownerid=$(cat $mountpoint/.SpaceMan/hsmfsconfig.xml | grep Ownernode | cut -d">" -f2 | cut -d"<" -f1)
-  ownernode=$($mmlscluster | awk '{print $1,$2}' | grep "^$ownerid " | awk '{print $2}' | cut -d. -f1)
+  ownernode=$(cat $GPFSSDRFILE | grep ":20_MEMBER_NODE:" | cut -d: -f5,6 | grep "^$ownerid:" | cut -d: -f2)
 
   if [ "$ownernode"x = "x" -o "$hostnam"x = "x" -o "$ownernode"x != "$hostnam"x ]; then
      exit 0

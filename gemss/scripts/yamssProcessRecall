@@ -158,8 +158,8 @@ if [ "$recfile"x != "0x" ]; then
      echo "$myline"
      for file in $(cat ./$(basename $recfile) | awk '{print $4}'); do
         let i=$i+1
-        # catch file name on the line
-        if echo "$myline" | egrep "^$file | $file | $file$" >/dev/null 2>&1; then
+        # catch file name on the line and exclude ANS9101I (e.g. when file is already on disk)
+        if echo "$myline" | egrep -v "^ANS9101I " | egrep "^$file | $file | $file$" >/dev/null 2>&1; then
           # catch if it was succesful
           if echo "$myline" | egrep "^Recalling" 2>/dev/null | egrep "\[Done\]$" >/dev/null 2>&1; then
              # log success to sensor file
@@ -190,7 +190,11 @@ if [ "$recfile"x != "0x" ]; then
   for file in $(cat ./$(basename $recfile) | awk '{print $4}'); do
     let i=$i+1
     if [ ${arrayDone[$i]}"x" != "successx" -a ${arrayDone[$i]}"x" != "failurex" ]; then
-       echo REC ERR $(date +%s) $file $(hostname) >> $STATDIR/sensor_recall
+       # check if file is already on disk
+       IBMPMig=$($yamssGetDmAttr $file IBMPMig 2>/dev/null)
+       if [ $? != 0 ]; then
+         echo REC ERR $(date +%s) $file $(hostname) >> $STATDIR/sensor_recall
+       fi
     fi
   done
 
@@ -234,10 +238,15 @@ if [ "$recfile"x != "0x" ]; then
      if [ "$stat"x != "RES"x ]; then
        extobjid=$($yamssGetDmAttr $file IBMPMig 2>/dev/null)
        rc_a=$?
-       objectid=$(tsm_select "object_id from spacemgfiles where filespace_name='$mountpoint' and extobjid=upper('$extobjid')")
+       objectid=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select object_id from $TSM_SERVER_DB_NAME.spacemgfiles where filespace_name='$mountpoint' and extobjid=upper('$extobjid')")
        rc_b=$?
-       volname=$(read_volume_name $objectid)
-       rc_c=$?
+       rc_c=1
+       if [ "$objectid"x = "x" ]; then
+         rc_b=1
+       else
+         volname=$(read_volume_name $objectid)
+         rc_c=$?
+       fi
 
        if [ $rc_a != 0 -o  $rc_b != 0 -o  $rc_c != 0 ]; then
          volname=null 

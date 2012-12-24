@@ -39,8 +39,7 @@ tsm_select() {
 }
 
 read_volume_name() {
-  str=$($dsmadmc -id=$TSM_ID -password=$TSM_PASSWORD -tabdelimited -dataonly=yes "show bfo $1" | grep "Volume Name" | head -n 1)
-  volname=$(strstr "$str" "Volume Name" |awk '{print $3}')
+  volname=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "SELECT VOLNAME FROM TSMDB1.SS_VOLUME_IDS WHERE VOLID=(SELECT VOLID FROM TSMDB1.AF_SEGMENTS WHERE SRVID=0 AND POOLID=(SELECT POOLID FROM TSMDB1.AF_BITFILES WHERE SRVID=0 AND BFID=$1) AND BFID=$1 FETCH FIRST 1 ROW ONLY)")
 
   if [ "$volname"x != "x" ]; then
     echo $volname
