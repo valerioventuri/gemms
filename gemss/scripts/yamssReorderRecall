@@ -227,7 +227,7 @@ if [ $numrec -ne 0 ]; then
    cat $tmpdir/recall.queue.proc.tmp | awk '{print $1}' > $tmpdir/recall.queue.proc
 
    # cleanup the damned directory
-   rm -rf "$mountpoint/.SpaceMan/tapeOptimizedRecall/*"
+   rm -rf "$mountpoint/.SpaceMan/tapeOptimizedRecall"
 
    # call the dsmrecall with preview option to produce tape ordered lists
    cd $tmpdir

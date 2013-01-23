@@ -8,10 +8,10 @@ MIGRATE_NODE_LIST="tsm-hsm-4,tsm-hsm-5"
 MIGRATE_SCAN_FREQUENCY=1800
 
 # set to yes if you want the scan to be performed on a subtree of the filesystem
-USE_PATH_FOR_MIGRATE_SCAN=yes
+MIGRATE_SCAN_USE_PATH=yes
 
 # if previous is yes, set this to the path of the subtree (relative to the mountpoint)
-PATH_FOR_MIGRATE_SCAN=lhcb/tape
+MIGRATE_SCAN_PATH=lhcb/tape
 
 # maximum number of running migrate threads per node
 MIGRATE_RUNNING_THREADS=2
