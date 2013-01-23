@@ -107,7 +107,8 @@ for filewrapper in $(ls $DMRECALLDIR); do
     mntpoint=$(echo $filep | awk '{print $2}')
     inodenum=$(echo $filep | awk '{print $3}')
     # determine path querying the tsm db
-    fname=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select file_name from $TSM_SERVER_DB_NAME.spacemgfiles where filespace_name='$mntpoint' and extobjid='$extobjid'")
+
+    fname=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select alias from $TSM_SERVER_DB_NAME.spaceman_objects as sos left join $TSM_SERVER_DB_NAME.nodes nr on (sos.nodeid=nr.nodeid) left join $TSM_SERVER_DB_NAME.filespaces fs on (sos.fsid=fs.fsid) where nr.nodename='$TSM_PROXY_NODE' and fs.fsname='$mountpoint' and state=1 and extobjid=x'$extobjid'")
     rc=$?
     if [ $rc = 0 -a "$fname"x != "x" ]; then
       echo $mntpoint$fname $(date +%s) 0 >> $tmprecq

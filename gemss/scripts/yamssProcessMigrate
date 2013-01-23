@@ -238,7 +238,7 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
         # add extended attribute to flag it is migrated
         $attr -s storm.migrated -V "" $file >/dev/null 2>&1
 
-        objectid=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select object_id from $TSM_SERVER_DB_NAME.spacemgfiles where filespace_name='$mountpoint' and extobjid=upper('$extobjid')")
+        objectid=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select objid from $TSM_SERVER_DB_NAME.spaceman_objects as sos left join $TSM_SERVER_DB_NAME.nodes nr on (sos.nodeid=nr.nodeid) left join $TSM_SERVER_DB_NAME.filespaces fs on (sos.fsid=fs.fsid) where nr.nodename='$TSM_PROXY_NODE' and fs.fsname='$mountpoint' and state=1 and extobjid=x'$extobjid'")
         rc_b=$?
         rc_c=1
         if [ "$objectid"x = "x" ]; then
@@ -261,7 +261,7 @@ if [ "$1" = "PREMIGRATE" -o "$1" = "MIGRATE" ]; then
 
      # get insert time from TSM DB
      if [ $extobjid"x" != "0x" ]; then 
-       inserttime=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select insert_date from $TSM_SERVER_DB_NAME.spacemgfiles where filespace_name='$mountpoint' and extobjid=upper('$extobjid')"|cut -d. -f1 | tr "-" " " | tr ":" " " | awk '{print mktime($0)}')
+       inserttime=$($ng yamssDB2Query $TSM_SERVER $TSM_SERVER_DB_NAME $TSM_SERVER_DB_PORT $TSM_SERVER_ID $TSM_SERVER_PASSWORD "select insdate from $TSM_SERVER_DB_NAME.spaceman_objects as sos left join $TSM_SERVER_DB_NAME.nodes nr on (sos.nodeid=nr.nodeid) left join $TSM_SERVER_DB_NAME.filespaces fs on (sos.fsid=fs.fsid) where nr.nodename='$TSM_PROXY_NODE' and fs.fsname='$mountpoint' and state=1 and extobjid=x'$extobjid'"|cut -d. -f1 | tr "-" " " | tr ":" " " | awk '{print mktime($0)}')
      else
        inserttime=$(date +%s)
      fi

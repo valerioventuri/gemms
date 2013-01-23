@@ -5,7 +5,7 @@ MYCCOPTS=-O2 -Wall
 all: yamssPreloadStat.so yamssSigTermUnblock yamssRm yamssStubbify yamssRemoveWrapper yamssRecall yamssDirectoryNotify yamssGetDmAttr yamssSetDmAttr yamssRemoveDmAttr yamssAbortDmSession yamssRecallDaemon yamssShowPoolOccupancy
 
 yamssPreloadStat.so: yamssPreloadStat.c
-	gcc -m32 -fPIC ${MYCCOPTS} --shared -Wl,-soname,yamssPreloadStat.so -ldl yamssPreloadStat.c -o yamssPreloadStat.so
+	gcc -fPIC ${MYCCOPTS} --shared -Wl,-soname,yamssPreloadStat.so -ldl yamssPreloadStat.c -o yamssPreloadStat.so
 
 yamssRecall: yamssRecall.c
 	gcc ${MYCCOPTS} yamssRecall.c -o yamssRecall
